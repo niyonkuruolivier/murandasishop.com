@@ -45,7 +45,7 @@ export function ProductGallery({ images, alt }: Props) {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       <div
         className="group relative aspect-square overflow-hidden rounded-2xl bg-secondary"
         onTouchStart={onTouchStart}

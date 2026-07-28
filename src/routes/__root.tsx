@@ -142,9 +142,8 @@ function RealtimeSync() {
       .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, () => {
         qc.invalidateQueries({ queryKey: ["categories"] });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
-        qc.invalidateQueries({ queryKey: ["orders"] });
-      })
+      // NOTE: 'orders' intentionally excluded from realtime — contains customer PII.
+      // Admin dashboard refetches orders on mutation instead.
       .subscribe();
     return () => {
       supabase.removeChannel(ch);

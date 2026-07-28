@@ -415,29 +415,61 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
               )}
             </div>
           </div>
-          <label className="block sm:col-span-2">
-            <span className="text-sm font-medium">Gallery images (one URL per line)</span>
-            <textarea
-              value={form.images}
-              onChange={(e) => setForm({ ...form, images: e.target.value })}
-              rows={4}
-              className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs"
-            />
+          <div className="block sm:col-span-2">
+            <span className="text-sm font-medium">Gallery images</span>
             <div className="mt-2 flex items-center gap-3">
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-semibold hover:bg-secondary/70">
                 <Plus className="h-4 w-4" />
-                Upload gallery images
+                Add more photos
                 <input
                   type="file"
                   accept="image/*"
                   multiple
                   className="hidden"
-                  onChange={(e) => handleGalleryUpload(e.target.files)}
+                  onChange={(e) => {
+                    handleGalleryUpload(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
                 />
               </label>
               {uploading && <span className="text-xs text-muted-foreground">Uploading…</span>}
+              <span className="text-xs text-muted-foreground">
+                {form.images.split("\n").map((s) => s.trim()).filter(Boolean).length} photo(s)
+              </span>
             </div>
-          </label>
+            {form.images.split("\n").map((s) => s.trim()).filter(Boolean).length > 0 && (
+              <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                {form.images
+                  .split("\n")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                  .map((url, idx) => (
+                    <div key={`${url}-${idx}`} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                      <img src={url} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const list = form.images.split("\n").map((s) => s.trim()).filter(Boolean);
+                          list.splice(idx, 1);
+                          setForm({ ...form, images: list.join("\n") });
+                        }}
+                        className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label="Remove photo"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+            <textarea
+              value={form.images}
+              onChange={(e) => setForm({ ...form, images: e.target.value })}
+              rows={3}
+              placeholder="Or paste image URLs, one per line"
+              className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs"
+            />
+          </div>
           <label className="block sm:col-span-2">
             <span className="text-sm font-medium">Specs (JSON)</span>
             <textarea

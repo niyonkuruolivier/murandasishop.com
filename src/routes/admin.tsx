@@ -647,6 +647,18 @@ function CategoriesTab() {
     refetch();
   };
 
+  const move = async (idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= categories.length) return;
+    const a = categories[idx];
+    const b = categories[target];
+    await Promise.all([
+      supabase.from("categories").update({ sort_order: b.sort_order ?? target + 1 }).eq("slug", a.slug),
+      supabase.from("categories").update({ sort_order: a.sort_order ?? idx + 1 }).eq("slug", b.slug),
+    ]);
+    refetch();
+  };
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-border bg-card p-4">
@@ -680,21 +692,40 @@ function CategoriesTab() {
       </div>
 
       <ul className="divide-y divide-border rounded-2xl border border-border">
-        {categories.map((c) => (
-          <li key={c.slug} className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-3">
+        {categories.map((c, idx) => (
+          <li key={c.slug} className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
               <span className="text-2xl">{c.emoji}</span>
-              <div>
-                <div className="font-semibold">{c.name}</div>
-                <div className="text-xs text-muted-foreground">/{c.slug}</div>
+              <div className="min-w-0">
+                <div className="truncate font-semibold">{c.name}</div>
+                <div className="truncate text-xs text-muted-foreground">/{c.slug}</div>
               </div>
             </div>
-            <button
-              onClick={() => remove(c.slug)}
-              className="rounded-lg p-2 text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                onClick={() => move(idx, -1)}
+                disabled={idx === 0}
+                aria-label="Move up"
+                className="rounded-lg p-2 hover:bg-muted disabled:opacity-30"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => move(idx, 1)}
+                disabled={idx === categories.length - 1}
+                aria-label="Move down"
+                className="rounded-lg p-2 hover:bg-muted disabled:opacity-30"
+              >
+                <ArrowDown className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => remove(c.slug)}
+                aria-label="Delete"
+                className="rounded-lg p-2 text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </li>
         ))}
       </ul>

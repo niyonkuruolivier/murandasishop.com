@@ -30,7 +30,7 @@ export function ProductCard({ product }: { product: Product }) {
       params={{ id: product.slug }}
       className="group flex h-full flex-col rounded-2xl border border-border bg-card p-4 transition hover:shadow-lg hover:-translate-y-0.5"
     >
-      <div className="mx-auto w-[70%] overflow-hidden rounded-xl aspect-square bg-secondary">
+      <div className="w-full overflow-hidden rounded-xl aspect-square bg-secondary">
         <img
           src={product.image}
           alt={product.name}
@@ -40,7 +40,7 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
       <div className="mt-4 flex flex-1 flex-col justify-between space-y-2">
         <h3 className="line-clamp-2 min-h-[3rem] text-base font-semibold">{product.name}</h3>
-        <div className="text-sm font-bold">FRW {product.price.toLocaleString()}</div>
+        <div className="text-lg font-black text-foreground">FRW {product.price.toLocaleString()}</div>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center justify-between gap-2 text-xs leading-none sm:flex-col sm:items-start sm:gap-0.5 sm:text-sm">
             <span className="flex items-center gap-1 font-medium text-muted-foreground">

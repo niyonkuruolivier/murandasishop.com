@@ -3,7 +3,7 @@ import { ArrowRight, LayoutGrid } from "lucide-react";
 
 export function Hero() {
   return (
-    <section className="px-3 pt-4 sm:px-4 sm:pt-6">
+    <section className="pt-4 sm:pt-6">
       <div className="relative mx-auto h-[50vh] max-h-[420px] min-h-[260px] max-w-7xl overflow-hidden rounded-3xl sm:rounded-[32px]">
         {/* Background */}
         <div className="absolute inset-0 animate-hero-zoom">

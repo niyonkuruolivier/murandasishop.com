@@ -163,6 +163,7 @@ function RootComponent() {
           <RealtimeSync />
           <div className="min-h-screen bg-background">
             <Header />
+            <CategoryBar />
             <Outlet />
           </div>
         </CartProvider>

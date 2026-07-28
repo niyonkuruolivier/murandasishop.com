@@ -140,12 +140,14 @@ function Field({
   type = "text",
   required,
   className = "",
+  defaultValue = "",
 }: {
   label: string;
   name: string;
   type?: string;
   required?: boolean;
   className?: string;
+  defaultValue?: string;
 }) {
   return (
     <label className={`block ${className}`}>
@@ -154,6 +156,7 @@ function Field({
         name={name}
         type={type}
         required={required}
+        defaultValue={defaultValue}
         className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 outline-none transition focus:border-accent"
       />
     </label>

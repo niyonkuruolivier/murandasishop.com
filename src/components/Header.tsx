@@ -1,8 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Search, ShoppingCart, Home, LayoutGrid, LayoutDashboard } from "lucide-react";
+import { Search, ShoppingCart, Home, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
-import { useCategories } from "@/lib/products";
 import { useIsAdmin } from "@/lib/auth";
 import logo from "@/assets/murandasi-logo.png.asset.json";
 

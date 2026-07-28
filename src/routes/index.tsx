@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
           "Browse phones, laptops, headphones, TVs and more. Simple prices, fast delivery.",
       },
       { property: "og:title", content: "Murandasi Shop — Electronics Made Simple" },
-      { property: "og:description", content: "Shop electronics the simple way." },
+      { property: "og:description", content: "Browse phones, laptops, headphones, TVs and more. Simple prices, fast delivery." },
     ],
   }),
   component: Index,

@@ -79,20 +79,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Murandasi Shop — Simple Electronics, Fast Delivery" },
+      { title: "Murandasi Shop — Electronics Made Simple" },
       {
         name: "description",
         content:
-          "Shop phones, laptops, watches, headphones, TVs, gaming and accessories at Murandasi. Simple, fast, and honest online shopping.",
+          "Browse phones, laptops, headphones, TVs and more. Simple prices, fast delivery.",
       },
       { name: "author", content: "Murandasi Shop" },
-      { property: "og:title", content: "Murandasi Shop" },
+      { property: "og:title", content: "Murandasi Shop — Electronics Made Simple" },
       {
         property: "og:description",
-        content: "The simplest way to buy electronics online.",
+        content: "Browse phones, laptops, headphones, TVs and more. Simple prices, fast delivery.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Murandasi Shop — Electronics Made Simple" },
+      { name: "twitter:description", content: "Browse phones, laptops, headphones, TVs and more. Simple prices, fast delivery." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5804bbd6-7e8d-486d-934a-13c5163e130f/id-preview-8a5c834a--a0d62bae-7360-4bc0-9299-2802edf12550.lovable.app-1785252845507.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5804bbd6-7e8d-486d-934a-13c5163e130f/id-preview-8a5c834a--a0d62bae-7360-4bc0-9299-2802edf12550.lovable.app-1785252845507.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

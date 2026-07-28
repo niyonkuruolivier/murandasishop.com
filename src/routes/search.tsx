@@ -50,9 +50,11 @@ function SearchPage() {
           Nothing found. <Link to="/" className="text-accent underline">Browse all</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+        <div className="grid grid-cols-2 gap-4 min-w-0 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
           {results.map((p) => (
-            <ProductCard key={p.id} product={p} />
+            <div key={p.id} className="min-w-0">
+              <ProductCard product={p} />
+            </div>
           ))}
         </div>
       )}

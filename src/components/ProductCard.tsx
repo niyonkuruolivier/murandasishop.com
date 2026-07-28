@@ -1,9 +1,8 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Star, ShoppingCart, Zap } from "lucide-react";
 import { useState } from "react";
 import type { Product } from "@/lib/products";
 import { useCart } from "@/lib/cart";
-import { useNavigate } from "@tanstack/react-router";
 
 export function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
@@ -13,7 +12,7 @@ export function ProductCard({ product }: { product: Product }) {
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    add(product.id);
+    add(product);
     setBump(true);
     setTimeout(() => setBump(false), 350);
   };
@@ -21,14 +20,14 @@ export function ProductCard({ product }: { product: Product }) {
   const handleBuy = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    add(product.id);
+    add(product);
     navigate({ to: "/checkout" });
   };
 
   return (
     <Link
       to="/product/$id"
-      params={{ id: product.id }}
+      params={{ id: product.slug }}
       className="group block rounded-2xl border border-border bg-card p-4 transition hover:shadow-lg hover:-translate-y-0.5"
     >
       <div className="aspect-square overflow-hidden rounded-xl bg-secondary">

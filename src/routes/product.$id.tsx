@@ -1,5 +1,5 @@
-import { createFileRoute, notFound, useNavigate, Link } from "@tanstack/react-router";
-import { getProduct } from "@/lib/products";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useProductBySlug } from "@/lib/products";
 import { useCart } from "@/lib/cart";
 import { useState } from "react";
 import { ProductGallery } from "@/components/ProductGallery";
@@ -17,37 +17,39 @@ import {
 import { whatsappUrl, productMessage } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/product/$id")({
-  loader: ({ params }) => {
-    const product = getProduct(params.id);
-    if (!product) throw notFound();
-    return { product };
-  },
-  head: ({ loaderData }) => {
-    const p = loaderData?.product;
-    if (!p) return { meta: [{ title: "Product — Murandasi" }] };
-    return {
-      meta: [
-        { title: `${p.name} — Murandasi Shop` },
-        { name: "description", content: `${p.name}. $${p.price}. ${p.warranty}. ${p.delivery}.` },
-        { property: "og:title", content: `${p.name} — Murandasi Shop` },
-        { property: "og:description", content: `${p.name}. $${p.price}.` },
-        { property: "og:image", content: p.image },
-        { name: "twitter:image", content: p.image },
-      ],
-    };
-  },
+  head: ({ params }) => ({
+    meta: [
+      { title: `${params.id} — Murandasi Shop` },
+      { name: "description", content: `Product details at Murandasi Shop.` },
+      { property: "og:title", content: `Murandasi Shop` },
+      { property: "og:description", content: `Product details.` },
+    ],
+  }),
   component: ProductPage,
 });
 
 function ProductPage() {
-  const { product } = Route.useLoaderData();
+  const { id: slug } = Route.useParams();
+  const { data: product, isLoading, isError } = useProductBySlug(slug);
   const { add } = useCart();
   const navigate = useNavigate();
   const [showSpecs, setShowSpecs] = useState(false);
 
-  const handleAdd = () => add(product.id);
+  if (isLoading) {
+    return <main className="mx-auto max-w-7xl px-4 py-20 text-center text-muted-foreground">Loading…</main>;
+  }
+  if (isError || !product) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-20 text-center">
+        <h1 className="text-2xl font-bold">Product not found</h1>
+        <Link to="/" className="mt-4 inline-block text-accent underline">Back to shop</Link>
+      </main>
+    );
+  }
+
+  const handleAdd = () => add(product);
   const handleBuy = () => {
-    add(product.id);
+    add(product);
     navigate({ to: "/checkout" });
   };
 

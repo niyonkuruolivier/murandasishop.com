@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -12,7 +12,9 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CartProvider } from "../lib/cart";
+import { AuthProvider } from "../lib/auth";
 import { Header } from "../components/Header";
+import { supabase } from "../integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -127,17 +129,44 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function RealtimeSync() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const ch = supabase
+      .channel("shop-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => {
+        qc.invalidateQueries({ queryKey: ["products"] });
+        qc.invalidateQueries({ queryKey: ["product"] });
+        qc.invalidateQueries({ queryKey: ["admin-products"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, () => {
+        qc.invalidateQueries({ queryKey: ["categories"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        qc.invalidateQueries({ queryKey: ["orders"] });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [qc]);
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <div className="min-h-screen bg-background">
-          <Header />
-          <Outlet />
-        </div>
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <RealtimeSync />
+          <div className="min-h-screen bg-background">
+            <Header />
+            <Outlet />
+          </div>
+        </CartProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

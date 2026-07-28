@@ -40,10 +40,10 @@ function CartPage() {
         <ul className="space-y-4">
           {detailed.map((item) => (
             <li
-              key={item.id}
+              key={item.slug}
               className="flex gap-4 rounded-2xl border border-border bg-card p-4"
             >
-              <Link to="/product/$id" params={{ id: item.id }} className="shrink-0">
+              <Link to="/product/$id" params={{ id: item.slug }} className="shrink-0">
                 <img
                   src={item.product.image}
                   alt={item.product.name}
@@ -54,7 +54,7 @@ function CartPage() {
                 <div>
                   <Link
                     to="/product/$id"
-                    params={{ id: item.id }}
+                    params={{ id: item.slug }}
                     className="line-clamp-2 font-semibold hover:text-accent"
                   >
                     {item.product.name}
@@ -66,7 +66,7 @@ function CartPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 rounded-full border border-border">
                     <button
-                      onClick={() => setQty(item.id, item.qty - 1)}
+                      onClick={() => setQty(item.slug, item.qty - 1)}
                       className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary"
                       aria-label="Decrease"
                     >
@@ -74,7 +74,7 @@ function CartPage() {
                     </button>
                     <span className="w-6 text-center font-semibold">{item.qty}</span>
                     <button
-                      onClick={() => setQty(item.id, item.qty + 1)}
+                      onClick={() => setQty(item.slug, item.qty + 1)}
                       className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary"
                       aria-label="Increase"
                     >
@@ -82,7 +82,7 @@ function CartPage() {
                     </button>
                   </div>
                   <button
-                    onClick={() => remove(item.id)}
+                    onClick={() => remove(item.slug)}
                     className="flex items-center gap-1 text-sm text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" /> Remove

@@ -7,7 +7,7 @@ export function CategoryBar() {
   const { data: categories = [] } = useCategories();
 
   return (
-    <div className="sticky top-[4.5rem] z-30 border-b border-border bg-background/95 backdrop-blur">
+    <div className="fixed top-[4.5rem] z-30 w-full border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <Link
           to="/"

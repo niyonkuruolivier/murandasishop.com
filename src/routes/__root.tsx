@@ -164,6 +164,7 @@ function RootComponent() {
           <div className="min-h-screen bg-background">
             <Header />
             <CategoryBar />
+            <div className="h-[9rem]" />
             <Outlet />
           </div>
         </CartProvider>

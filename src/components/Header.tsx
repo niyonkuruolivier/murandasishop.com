@@ -17,7 +17,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
+    <header className="fixed top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
         <Link to="/" className="flex shrink-0 items-center gap-2 text-xl font-black tracking-tight">
           <img src={logo.url} alt="Murandasi Shop logo" className="h-9 w-9 object-contain" />

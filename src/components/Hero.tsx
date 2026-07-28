@@ -14,7 +14,7 @@ export function Hero() {
             loading="eager"
           />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/85" />
 
         {/* Content */}
         <div className="relative flex h-full flex-col items-center justify-center px-5 py-8 text-center sm:px-8 sm:py-10">

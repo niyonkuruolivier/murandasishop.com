@@ -253,7 +253,40 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
     specs: product?.specs ? JSON.stringify(product.specs, null, 2) : "{}",
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleMainUpload = async (file: File | undefined) => {
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const url = await uploadProductImage(file);
+      setForm((f) => ({ ...f, image: url, images: f.images ? f.images : url }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleGalleryUpload = async (files: FileList | null) => {
+    if (!files || !files.length) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const urls = await uploadProductImages(files);
+      setForm((f) => {
+        const existing = f.images.split("\n").map((s) => s.trim()).filter(Boolean);
+        const merged = [...existing, ...urls];
+        return { ...f, images: merged.join("\n"), image: f.image || urls[0] };
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const save = async () => {
     setError(null);

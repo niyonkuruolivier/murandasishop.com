@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CartProvider } from "../lib/cart";
 import { AuthProvider } from "../lib/auth";
 import { Header } from "../components/Header";
+import { CategoryBar } from "../components/CategoryBar";
 import { supabase } from "../integrations/supabase/client";
 
 function NotFoundComponent() {

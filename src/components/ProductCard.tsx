@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Star, ShoppingCart, Zap } from "lucide-react";
+import { Package, ShoppingCart, Zap } from "lucide-react";
 import { useState } from "react";
 import type { Product } from "@/lib/products";
 import { useCart } from "@/lib/cart";

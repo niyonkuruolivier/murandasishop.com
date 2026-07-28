@@ -4,7 +4,7 @@ import { useCart } from "@/lib/cart";
 import { useState } from "react";
 import { ProductGallery } from "@/components/ProductGallery";
 import {
-  Star,
+  Package,
   ShoppingCart,
   Zap,
   ShieldCheck,

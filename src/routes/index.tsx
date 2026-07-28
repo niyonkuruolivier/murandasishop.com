@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ProductCard } from "@/components/ProductCard";
+import { Hero } from "@/components/Hero";
 import { products } from "@/lib/products";
 
 export const Route = createFileRoute("/")({

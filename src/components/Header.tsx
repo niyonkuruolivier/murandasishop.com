@@ -59,7 +59,8 @@ export function Header() {
               </span>
             )}
           </Link>
-      </nav>
+        </nav>
+      </div>
     </header>
   );
 }

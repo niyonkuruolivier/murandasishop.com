@@ -647,6 +647,18 @@ function CategoriesTab() {
     refetch();
   };
 
+  const move = async (idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= categories.length) return;
+    const a = categories[idx];
+    const b = categories[target];
+    await Promise.all([
+      supabase.from("categories").update({ sort_order: b.sort_order ?? target + 1 }).eq("slug", a.slug),
+      supabase.from("categories").update({ sort_order: a.sort_order ?? idx + 1 }).eq("slug", b.slug),
+    ]);
+    refetch();
+  };
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-border bg-card p-4">

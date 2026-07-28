@@ -70,7 +70,7 @@ function CheckoutPage() {
               <Field label="Phone" name="phone" type="tel" required />
               <Field label="Address" name="address" required className="sm:col-span-2" />
               <Field label="City" name="city" required />
-              <Field label="Country" name="country" required />
+              <Field label="Country" name="country" defaultValue="Rwanda" required />
             </div>
           </section>
 
@@ -140,12 +140,14 @@ function Field({
   type = "text",
   required,
   className = "",
+  defaultValue = "",
 }: {
   label: string;
   name: string;
   type?: string;
   required?: boolean;
   className?: string;
+  defaultValue?: string;
 }) {
   return (
     <label className={`block ${className}`}>
@@ -154,6 +156,7 @@ function Field({
         name={name}
         type={type}
         required={required}
+        defaultValue={defaultValue}
         className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 outline-none transition focus:border-accent"
       />
     </label>

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Package,
   ShoppingBag,
@@ -11,11 +11,15 @@ import {
   Pencil,
   Trash2,
   X,
+  Image as ImageIcon,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/lib/auth";
 import { useCategories } from "@/lib/products";
 import { uploadProductImage, uploadProductImages } from "@/lib/upload";
+import type { HeroSlide } from "@/components/Hero";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -29,7 +33,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "products" | "orders" | "categories" | "analytics";
+type Tab = "products" | "orders" | "categories" | "hero" | "analytics";
 
 function AdminPage() {
   const { user, loading } = useAuth();
@@ -87,6 +91,7 @@ function AdminPage() {
             { id: "products", label: "Products", icon: Package },
             { id: "orders", label: "Orders", icon: ShoppingBag },
             { id: "categories", label: "Categories", icon: LayoutGrid },
+            { id: "hero", label: "Hero", icon: ImageIcon },
             { id: "analytics", label: "Analytics", icon: BarChart3 },
           ] as const
         ).map((t) => (
@@ -107,6 +112,7 @@ function AdminPage() {
       {tab === "products" && <ProductsTab />}
       {tab === "orders" && <OrdersTab />}
       {tab === "categories" && <CategoriesTab />}
+      {tab === "hero" && <HeroTab />}
       {tab === "analytics" && <AnalyticsTab />}
 
       <p className="mt-8 text-center text-xs text-muted-foreground">
@@ -734,6 +740,310 @@ function AnalyticsTab() {
           <div className="mt-2 text-3xl font-black">{c.value}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============= HERO SLIDES =============
+function useHeroSlidesAdmin() {
+  return useQuery({
+    queryKey: ["admin-hero-slides"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hero_slides")
+        .select("*")
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as HeroSlide[];
+    },
+  });
+}
+
+function HeroTab() {
+  const { data: slides = [], isLoading, refetch } = useHeroSlidesAdmin();
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<HeroSlide | "new" | null>(null);
+
+  const invalidatePublic = () => qc.invalidateQueries({ queryKey: ["hero-slides"] });
+
+  const move = async (slide: HeroSlide, dir: -1 | 1) => {
+    const sorted = [...slides].sort((a, b) => a.sort_order - b.sort_order);
+    const idx = sorted.findIndex((s) => s.id === slide.id);
+    const swap = sorted[idx + dir];
+    if (!swap) return;
+    await Promise.all([
+      supabase.from("hero_slides").update({ sort_order: swap.sort_order }).eq("id", slide.id),
+      supabase.from("hero_slides").update({ sort_order: slide.sort_order }).eq("id", swap.id),
+    ]);
+    refetch();
+    invalidatePublic();
+  };
+
+  const toggleActive = async (slide: HeroSlide) => {
+    await supabase.from("hero_slides").update({ active: !slide.active }).eq("id", slide.id);
+    refetch();
+    invalidatePublic();
+  };
+
+  const remove = async (slide: HeroSlide) => {
+    if (!confirm(`Delete slide "${slide.title || "Untitled"}"?`)) return;
+    await supabase.from("hero_slides").delete().eq("id", slide.id);
+    refetch();
+    invalidatePublic();
+  };
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-bold">{slides.length} hero slides</h2>
+        <button
+          onClick={() => setEditing("new")}
+          className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-accent-foreground hover:brightness-110"
+        >
+          <Plus className="h-4 w-4" /> New slide
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="rounded-2xl border border-border p-8 text-center text-muted-foreground">Loading…</div>
+      ) : slides.length === 0 ? (
+        <div className="rounded-2xl border border-border p-8 text-center text-muted-foreground">
+          No slides yet. Add one to customize the homepage banner.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {slides.map((s, i) => (
+            <li
+              key={s.id}
+              className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-3"
+            >
+              <img src={s.image} alt="" className="h-16 w-28 flex-shrink-0 rounded-lg object-cover" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-semibold">
+                  {s.title} <span className="text-accent">{s.highlight}</span>
+                </div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {s.cta_label} → {s.cta_href}
+                </div>
+              </div>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                  s.active ? "border-success text-success" : "border-border text-muted-foreground"
+                }`}
+              >
+                {s.active ? "Live" : "Hidden"}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => move(s, -1)}
+                  disabled={i === 0}
+                  className="rounded-lg p-2 hover:bg-secondary disabled:opacity-30"
+                  aria-label="Move up"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => move(s, 1)}
+                  disabled={i === slides.length - 1}
+                  className="rounded-lg p-2 hover:bg-secondary disabled:opacity-30"
+                  aria-label="Move down"
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => toggleActive(s)}
+                  className="rounded-lg px-3 py-2 text-xs font-semibold hover:bg-secondary"
+                >
+                  {s.active ? "Hide" : "Show"}
+                </button>
+                <button
+                  onClick={() => setEditing(s)}
+                  className="rounded-lg p-2 hover:bg-secondary"
+                  aria-label="Edit"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => remove(s)}
+                  className="rounded-lg p-2 text-destructive hover:bg-destructive/10"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {editing && (
+        <HeroSlideEditor
+          slide={editing === "new" ? null : editing}
+          nextSortOrder={(slides[slides.length - 1]?.sort_order ?? 0) + 1}
+          onClose={() => {
+            setEditing(null);
+            refetch();
+            invalidatePublic();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function HeroSlideEditor({
+  slide,
+  nextSortOrder,
+  onClose,
+}: {
+  slide: HeroSlide | null;
+  nextSortOrder: number;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    image: slide?.image ?? "",
+    title: slide?.title ?? "",
+    highlight: slide?.highlight ?? "",
+    cta_label: slide?.cta_label ?? "Shop Now",
+    cta_href: slide?.cta_href ?? "/search",
+    active: slide?.active ?? true,
+  });
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleUpload = async (file: File | undefined) => {
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const url = await uploadProductImage(file);
+      setForm((f) => ({ ...f, image: url }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const save = async () => {
+    setError(null);
+    if (!form.image.trim()) {
+      setError("An image is required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        image: form.image.trim(),
+        title: form.title.trim(),
+        highlight: form.highlight.trim(),
+        cta_label: form.cta_label.trim() || "Shop Now",
+        cta_href: form.cta_href.trim() || "/search",
+        active: form.active,
+      };
+      if (slide) {
+        const { error } = await supabase.from("hero_slides").update(payload).eq("id", slide.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("hero_slides")
+          .insert({ ...payload, sort_order: nextSortOrder });
+        if (error) throw error;
+      }
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+      <div className="w-full max-w-xl rounded-2xl bg-background p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-xl font-black">{slide ? "Edit slide" : "New slide"}</h3>
+          <button onClick={onClose} className="rounded-full p-2 hover:bg-secondary">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <span className="text-sm font-medium">Background image</span>
+            <div className="mt-2 flex items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-semibold hover:bg-secondary/70">
+                <Plus className="h-4 w-4" />
+                {form.image ? "Replace image" : "Upload image"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleUpload(e.target.files?.[0])}
+                />
+              </label>
+              {uploading && <span className="text-xs text-muted-foreground">Uploading…</span>}
+            </div>
+            {form.image && (
+              <div className="mt-3 aspect-[21/9] overflow-hidden rounded-xl border border-border">
+                <img src={form.image} alt="preview" className="h-full w-full object-cover" />
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Title (first line)"
+              value={form.title}
+              onChange={(v) => setForm({ ...form, title: v })}
+            />
+            <TextField
+              label="Highlight (accent line)"
+              value={form.highlight}
+              onChange={(v) => setForm({ ...form, highlight: v })}
+            />
+            <TextField
+              label="Button label"
+              value={form.cta_label}
+              onChange={(v) => setForm({ ...form, cta_label: v })}
+            />
+            <TextField
+              label="Button link (e.g. /category/phones)"
+              value={form.cta_href}
+              onChange={(v) => setForm({ ...form, cta_href: v })}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })}
+              className="h-4 w-4"
+            />
+            Show this slide on the homepage
+          </label>
+        </div>
+
+        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-border px-5 py-2.5 font-semibold hover:bg-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={saving || uploading}
+            className="rounded-xl bg-accent px-6 py-2.5 font-bold text-accent-foreground hover:brightness-110 disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

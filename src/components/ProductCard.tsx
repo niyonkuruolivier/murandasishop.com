@@ -41,7 +41,7 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="mt-4 space-y-2">
         <h3 className="line-clamp-2 min-h-[3rem] text-base font-semibold">{product.name}</h3>
         <div className="text-2xl font-bold">${product.price.toLocaleString()}</div>
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
             <Package className="h-4 w-4 text-accent" />
             {product.stock} remaining

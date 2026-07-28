@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Search, ShoppingCart, Home, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
@@ -9,8 +9,6 @@ export function Header() {
   const { count } = useCart();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { data: categories = [] } = useCategories();
   const { data: isAdmin } = useIsAdmin();
 
   const submitSearch = (e: React.FormEvent) => {

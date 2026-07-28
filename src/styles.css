@@ -37,18 +37,18 @@
 :root {
   --radius: 0.75rem;
   --background: #cfcfe1;
-  --foreground: #0E0E6A;
+  --foreground: #000000;
   --card: #ffffff;
-  --card-foreground: #0E0E6A;
+  --card-foreground: #000000;
   --popover: #ffffff;
-  --popover-foreground: #0E0E6A;
-  /* Primary = dark navy on light background */
+  --popover-foreground: #000000;
+  /* Primary = dark navy for interactive elements */
   --primary: #0E0E6A;
   --primary-foreground: #ffffff;
   --secondary: #e8e8f0;
-  --secondary-foreground: #0E0E6A;
+  --secondary-foreground: #000000;
   --muted: #e8e8f0;
-  --muted-foreground: #565696;
+  --muted-foreground: #333333;
   /* Accent = orange #FF6B00 */
   --accent: #FF6B00;
   --accent-foreground: #ffffff;

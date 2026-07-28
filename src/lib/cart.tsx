@@ -1,24 +1,30 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { products, type Product } from "./products";
+import type { Product } from "./products";
 
-export type CartItem = { id: string; qty: number };
+export type CartLine = {
+  slug: string; // primary key in cart
+  name: string;
+  price: number;
+  image: string;
+  qty: number;
+};
 
 type CartContextValue = {
-  items: CartItem[];
+  items: CartLine[];
   count: number;
   total: number;
-  add: (id: string, qty?: number) => void;
-  remove: (id: string) => void;
-  setQty: (id: string, qty: number) => void;
+  add: (product: Pick<Product, "slug" | "name" | "price" | "image">, qty?: number) => void;
+  remove: (slug: string) => void;
+  setQty: (slug: string, qty: number) => void;
   clear: () => void;
-  detailed: (CartItem & { product: Product })[];
+  detailed: (CartLine & { product: { name: string; price: number; image: string } })[];
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-const KEY = "murandasi_cart_v1";
+const KEY = "murandasi_cart_v2";
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartLine[]>([]);
 
   useEffect(() => {
     try {
@@ -33,28 +39,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [items]);
 
-  const add = (id: string, qty = 1) =>
+  const add: CartContextValue["add"] = (product, qty = 1) =>
     setItems((prev) => {
-      const found = prev.find((i) => i.id === id);
-      if (found) return prev.map((i) => (i.id === id ? { ...i, qty: i.qty + qty } : i));
-      return [...prev, { id, qty }];
+      const found = prev.find((i) => i.slug === product.slug);
+      if (found)
+        return prev.map((i) =>
+          i.slug === product.slug ? { ...i, qty: i.qty + qty } : i,
+        );
+      return [
+        ...prev,
+        { slug: product.slug, name: product.name, price: product.price, image: product.image, qty },
+      ];
     });
-  const remove = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id));
-  const setQty = (id: string, qty: number) =>
+
+  const remove = (slug: string) => setItems((prev) => prev.filter((i) => i.slug !== slug));
+  const setQty = (slug: string, qty: number) =>
     setItems((prev) =>
-      qty <= 0 ? prev.filter((i) => i.id !== id) : prev.map((i) => (i.id === id ? { ...i, qty } : i)),
+      qty <= 0 ? prev.filter((i) => i.slug !== slug) : prev.map((i) => (i.slug === slug ? { ...i, qty } : i)),
     );
   const clear = () => setItems([]);
 
-  const detailed = items
-    .map((i) => {
-      const product = products.find((p) => p.id === i.id);
-      return product ? { ...i, product } : null;
-    })
-    .filter(Boolean) as (CartItem & { product: Product })[];
+  const detailed = items.map((i) => ({
+    ...i,
+    product: { name: i.name, price: i.price, image: i.image },
+  }));
 
   const count = items.reduce((a, b) => a + b.qty, 0);
-  const total = detailed.reduce((a, b) => a + b.product.price * b.qty, 0);
+  const total = items.reduce((a, b) => a + b.price * b.qty, 0);
 
   return (
     <CartContext.Provider value={{ items, count, total, add, remove, setQty, clear, detailed }}>

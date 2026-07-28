@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProductCard } from "@/components/ProductCard";
-import { products } from "@/lib/products";
+import { useProducts } from "@/lib/products";
 
 const schema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/search")({
 
 function SearchPage() {
   const { q } = Route.useSearch();
+  const { data: products = [] } = useProducts();
   const query = q.trim().toLowerCase();
   const results = query
     ? products.filter(

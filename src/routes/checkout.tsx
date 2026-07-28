@@ -3,6 +3,7 @@ import { useCart } from "@/lib/cart";
 import { useState } from "react";
 import { CheckCircle2, MessageCircle } from "lucide-react";
 import { whatsappUrl, cartMessage } from "@/lib/whatsapp";
+import { createOrder } from "@/lib/orders";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -17,11 +18,12 @@ export const Route = createFileRoute("/checkout")({
 });
 
 function CheckoutPage() {
-  const { detailed, total, clear } = useCart();
+  const { detailed, items, total, clear } = useCart();
   const navigate = useNavigate();
   const [done, setDone] = useState(false);
   const [payment, setPayment] = useState("mtn");
-
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (done) {
     return (
@@ -52,11 +54,30 @@ function CheckoutPage() {
     );
   }
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    clear();
-    setDone(true);
-    setTimeout(() => navigate({ to: "/" }), 4000);
+    setError(null);
+    setSubmitting(true);
+    const fd = new FormData(e.currentTarget);
+    try {
+      await createOrder({
+        customer_name: String(fd.get("name") || ""),
+        phone: String(fd.get("phone") || ""),
+        address: String(fd.get("address") || ""),
+        city: String(fd.get("city") || ""),
+        country: String(fd.get("country") || "Rwanda"),
+        payment_method: payment,
+        items,
+        total,
+      });
+      clear();
+      setDone(true);
+      setTimeout(() => navigate({ to: "/" }), 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not place order. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -107,7 +128,7 @@ function CheckoutPage() {
           <h2 className="text-lg font-bold">Order</h2>
           <ul className="mt-4 space-y-3 text-sm">
             {detailed.map((i) => (
-              <li key={i.id} className="flex items-center gap-3">
+              <li key={i.slug} className="flex items-center gap-3">
                 <img src={i.product.image} alt="" className="h-12 w-12 rounded-lg object-cover" />
                 <div className="flex-1 min-w-0">
                   <div className="line-clamp-1 font-medium">{i.product.name}</div>
@@ -123,11 +144,13 @@ function CheckoutPage() {
             <span className="font-bold">Total</span>
             <span className="text-xl font-black">${total.toLocaleString()}</span>
           </div>
+          {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
           <button
             type="submit"
-            className="mt-6 w-full rounded-xl bg-accent py-4 text-base font-bold text-accent-foreground hover:brightness-110"
+            disabled={submitting}
+            className="mt-6 w-full rounded-xl bg-accent py-4 text-base font-bold text-accent-foreground hover:brightness-110 disabled:opacity-60"
           >
-            Place Order
+            {submitting ? "Placing…" : "Place Order"}
           </button>
           <a
             href={whatsappUrl(

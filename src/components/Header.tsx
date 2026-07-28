@@ -1,14 +1,17 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Search, ShoppingCart, Home, LayoutGrid } from "lucide-react";
+import { Search, ShoppingCart, Home, LayoutGrid, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
-import { categories } from "@/lib/products";
+import { useCategories } from "@/lib/products";
+import { useIsAdmin } from "@/lib/auth";
 
 export function Header() {
   const { count } = useCart();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { data: categories = [] } = useCategories();
+  const { data: isAdmin } = useIsAdmin();
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +38,16 @@ export function Header() {
           <Link to="/" className="hidden rounded-full p-3 hover:bg-secondary sm:block" aria-label="Home">
             <Home className="h-5 w-5" />
           </Link>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="hidden rounded-full p-3 hover:bg-secondary sm:block"
+              aria-label="Admin"
+              title="Admin dashboard"
+            >
+              <LayoutDashboard className="h-5 w-5" />
+            </Link>
+          )}
           <Link
             to="/cart"
             className="relative rounded-full p-3 hover:bg-secondary"

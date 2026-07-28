@@ -5,7 +5,7 @@ export function whatsappUrl(message: string) {
 }
 
 export function productMessage(p: { name: string; price: number }) {
-  return `Hello Murandasi Shop! 👋\n\nI'd like to order:\n• ${p.name}\n• Price: $${p.price.toLocaleString()}\n\nPlease confirm availability and delivery. Thank you!`;
+  return `Hello Murandasi Shop! 👋\n\nI'd like to order:\n• ${p.name}\n• Price: FRW ${p.price.toLocaleString()}\n\nPlease confirm availability and delivery. Thank you!`;
 }
 
 export function cartMessage(
@@ -13,7 +13,7 @@ export function cartMessage(
   total: number,
 ) {
   const lines = items
-    .map((i) => `• ${i.name} × ${i.qty} — $${(i.price * i.qty).toLocaleString()}`)
+    .map((i) => `• ${i.name} × ${i.qty} — FRW ${(i.price * i.qty).toLocaleString()}`)
     .join("\n");
-  return `Hello Murandasi Shop! 👋\n\nI'd like to place this order:\n${lines}\n\nTotal: $${total.toLocaleString()}\n\nPlease confirm and share delivery details. Thank you!`;
+  return `Hello Murandasi Shop! 👋\n\nI'd like to place this order:\n${lines}\n\nTotal: FRW ${total.toLocaleString()}\n\nPlease confirm and share delivery details. Thank you!`;
 }

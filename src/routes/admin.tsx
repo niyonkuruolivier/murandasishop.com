@@ -188,7 +188,7 @@ function ProductsTab() {
                     </div>
                   </td>
                   <td className="px-4 py-3 capitalize">{p.category_slug}</td>
-                  <td className="px-4 py-3 font-semibold">${Number(p.price).toLocaleString()}</td>
+                  <td className="px-4 py-3 font-semibold">FRW {Number(p.price).toLocaleString()}</td>
                   <td className="px-4 py-3">
                     <span className={p.stock > 0 ? "text-success" : "text-destructive"}>
                       {p.stock}
@@ -561,7 +561,7 @@ function OrdersTab() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="font-black">${Number(o.total).toLocaleString()}</span>
+              <span className="font-black">FRW {Number(o.total).toLocaleString()}</span>
               <select
                 value={o.status}
                 onClick={(e) => e.stopPropagation()}
@@ -592,7 +592,7 @@ function OrdersTab() {
                   <span>
                     {it.name} × {it.qty}
                   </span>
-                  <span className="font-semibold">${(it.price * it.qty).toLocaleString()}</span>
+                  <span className="font-semibold">FRW {(it.price * it.qty).toLocaleString()}</span>
                 </li>
               ))}
             </ul>
@@ -718,7 +718,7 @@ function AnalyticsTab() {
   }, [orders, products]);
 
   const cards = [
-    { label: "Total revenue", value: `$${stats.revenue.toLocaleString()}` },
+    { label: "Total revenue", value: `FRW ${stats.revenue.toLocaleString()}` },
     { label: "Total orders", value: stats.orders },
     { label: "Pending", value: stats.pending },
     { label: "Delivered", value: stats.delivered },

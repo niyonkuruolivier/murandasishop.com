@@ -62,7 +62,7 @@ function ProductPage() {
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         <ProductGallery images={product.images} alt={product.name} />
 
-        <div>
+        <div className="min-w-0">
           <h1 className="text-3xl font-black leading-tight sm:text-4xl">{product.name}</h1>
 
           <div className="mt-3 flex items-center gap-3 text-sm">

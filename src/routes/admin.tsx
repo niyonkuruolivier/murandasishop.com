@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Package,
   ShoppingBag,
@@ -11,11 +11,15 @@ import {
   Pencil,
   Trash2,
   X,
+  Image as ImageIcon,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/lib/auth";
 import { useCategories } from "@/lib/products";
 import { uploadProductImage, uploadProductImages } from "@/lib/upload";
+import type { HeroSlide } from "@/components/Hero";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({

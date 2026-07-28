@@ -36,7 +36,7 @@ function CategoryPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
-          {products.map((p) => (
+          {products.map((p: import("@/lib/products").Product) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>

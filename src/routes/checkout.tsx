@@ -1,0 +1,161 @@
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useCart } from "@/lib/cart";
+import { useState } from "react";
+import { CheckCircle2 } from "lucide-react";
+
+export const Route = createFileRoute("/checkout")({
+  head: () => ({
+    meta: [
+      { title: "Checkout — Murandasi Shop" },
+      { name: "description", content: "Complete your order in one simple step." },
+      { property: "og:title", content: "Checkout — Murandasi Shop" },
+      { property: "og:description", content: "One-page checkout." },
+    ],
+  }),
+  component: CheckoutPage,
+});
+
+function CheckoutPage() {
+  const { detailed, total, clear } = useCart();
+  const navigate = useNavigate();
+  const [done, setDone] = useState(false);
+  const [payment, setPayment] = useState("card");
+
+  if (done) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-20 text-center">
+        <CheckCircle2 className="mx-auto h-20 w-20 text-success" />
+        <h1 className="mt-6 text-3xl font-black">Order placed!</h1>
+        <p className="mt-2 text-muted-foreground">
+          Thank you. We've received your order and will deliver soon.
+        </p>
+        <Link
+          to="/"
+          className="mt-8 inline-flex rounded-xl bg-accent px-6 py-3 font-semibold text-accent-foreground hover:brightness-110"
+        >
+          Continue Shopping
+        </Link>
+      </main>
+    );
+  }
+
+  if (detailed.length === 0) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold">Your cart is empty</h1>
+        <Link to="/" className="mt-4 inline-block text-accent underline">
+          Browse products
+        </Link>
+      </main>
+    );
+  }
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    clear();
+    setDone(true);
+    setTimeout(() => navigate({ to: "/" }), 4000);
+  };
+
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-8">
+      <h1 className="mb-6 text-3xl font-black">Checkout</h1>
+      <form onSubmit={submit} className="grid gap-8 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-8">
+          <section className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="mb-4 text-lg font-bold">Shipping Address</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Full Name" name="name" required />
+              <Field label="Phone" name="phone" type="tel" required />
+              <Field label="Address" name="address" required className="sm:col-span-2" />
+              <Field label="City" name="city" required />
+              <Field label="Country" name="country" required />
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="mb-4 text-lg font-bold">Payment Method</h2>
+            <div className="space-y-3">
+              {[
+                { id: "card", label: "Credit / Debit Card" },
+                { id: "mobile", label: "Mobile Money" },
+                { id: "cod", label: "Cash on Delivery" },
+              ].map((m) => (
+                <label
+                  key={m.id}
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition ${
+                    payment === m.id ? "border-accent bg-accent/5" : "border-border"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment"
+                    value={m.id}
+                    checked={payment === m.id}
+                    onChange={() => setPayment(m.id)}
+                    className="h-4 w-4 accent-[oklch(0.7_0.2_45)]"
+                  />
+                  <span className="font-medium">{m.label}</span>
+                </label>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <aside className="h-fit rounded-2xl border border-border bg-card p-6 lg:sticky lg:top-32">
+          <h2 className="text-lg font-bold">Order</h2>
+          <ul className="mt-4 space-y-3 text-sm">
+            {detailed.map((i) => (
+              <li key={i.id} className="flex items-center gap-3">
+                <img src={i.product.image} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                <div className="flex-1 min-w-0">
+                  <div className="line-clamp-1 font-medium">{i.product.name}</div>
+                  <div className="text-muted-foreground">Qty {i.qty}</div>
+                </div>
+                <div className="font-semibold">
+                  ${(i.product.price * i.qty).toLocaleString()}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex justify-between border-t border-border pt-4">
+            <span className="font-bold">Total</span>
+            <span className="text-xl font-black">${total.toLocaleString()}</span>
+          </div>
+          <button
+            type="submit"
+            className="mt-6 w-full rounded-xl bg-accent py-4 text-base font-bold text-accent-foreground hover:brightness-110"
+          >
+            Place Order
+          </button>
+        </aside>
+      </form>
+    </main>
+  );
+}
+
+function Field({
+  label,
+  name,
+  type = "text",
+  required,
+  className = "",
+}: {
+  label: string;
+  name: string;
+  type?: string;
+  required?: boolean;
+  className?: string;
+}) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="text-sm font-medium">{label}</span>
+      <input
+        name={name}
+        type={type}
+        required={required}
+        className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 outline-none transition focus:border-accent"
+      />
+    </label>
+  );
+}

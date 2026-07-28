@@ -24,10 +24,6 @@ export function Hero() {
               <br />
               <span className="text-accent">Better Prices.</span>
             </h1>
-            <p className="animate-hero-sub mx-auto mt-4 max-w-lg text-sm text-white/85 sm:mt-5 sm:text-base">
-              Discover quality electronics, accessories, and smart devices
-              delivered across Rwanda.
-            </p>
             <div className="animate-hero-cta mt-6 flex flex-col items-stretch justify-center gap-3 sm:mt-8 sm:flex-row sm:items-center">
               <Link
                 to="/search"

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Star, ShoppingCart, Zap } from "lucide-react";
+import { Package, ShoppingCart, Zap } from "lucide-react";
 import { useState } from "react";
 import type { Product } from "@/lib/products";
 import { useCart } from "@/lib/cart";
@@ -42,10 +42,9 @@ export function ProductCard({ product }: { product: Product }) {
         <h3 className="line-clamp-2 min-h-[3rem] text-base font-semibold">{product.name}</h3>
         <div className="text-2xl font-bold">${product.price.toLocaleString()}</div>
         <div className="flex items-center justify-between text-sm">
-          <span className="flex items-center gap-1 text-muted-foreground">
-            <Star className="h-4 w-4 fill-accent text-accent" />
-            <span className="font-medium text-foreground">{product.rating}</span>
-            <span>({product.reviews})</span>
+          <span className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+            <Package className="h-4 w-4 text-accent" />
+            {product.stock} remaining
           </span>
           <span
             className={`flex items-center gap-1.5 font-medium ${

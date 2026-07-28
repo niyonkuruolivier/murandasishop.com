@@ -4,7 +4,7 @@ import { useCart } from "@/lib/cart";
 import { useState } from "react";
 import { ProductGallery } from "@/components/ProductGallery";
 import {
-  Star,
+  Package,
   ShoppingCart,
   Zap,
   ShieldCheck,
@@ -70,10 +70,9 @@ function ProductPage() {
           <h1 className="text-3xl font-black leading-tight sm:text-4xl">{product.name}</h1>
 
           <div className="mt-3 flex items-center gap-3 text-sm">
-            <span className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-accent text-accent" />
-              <span className="font-semibold">{product.rating}</span>
-              <span className="text-muted-foreground">({product.reviews} reviews)</span>
+            <span className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+              <Package className="h-4 w-4 text-accent" />
+              {product.stock} remaining
             </span>
             <span
               className={`flex items-center gap-1.5 font-medium ${

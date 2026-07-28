@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Search, ShoppingCart, User, Home, LayoutGrid } from "lucide-react";
+import { Search, ShoppingCart, Home, LayoutGrid } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { categories } from "@/lib/products";
@@ -47,9 +47,6 @@ export function Header() {
               </span>
             )}
           </Link>
-          <button className="hidden rounded-full p-3 hover:bg-secondary sm:block" aria-label="Account">
-            <User className="h-5 w-5" />
-          </button>
         </nav>
       </div>
 

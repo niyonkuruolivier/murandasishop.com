@@ -32,15 +32,17 @@ function Index() {
           </h2>
         </div>
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+          <div className="grid grid-cols-2 gap-4 min-w-0 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="aspect-square animate-pulse rounded-2xl bg-secondary" />
+              <div key={i} className="aspect-square min-w-0 animate-pulse rounded-2xl bg-secondary" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+          <div className="grid grid-cols-2 gap-4 min-w-0 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
             {products.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <div key={p.id} className="min-w-0">
+                <ProductCard product={p} />
+              </div>
             ))}
           </div>
         )}

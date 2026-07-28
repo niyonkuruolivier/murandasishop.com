@@ -41,11 +41,11 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="mt-4 space-y-2">
         <h3 className="line-clamp-2 min-h-[3rem] text-base font-semibold">{product.name}</h3>
         <div className="text-2xl font-bold">${product.price.toLocaleString()}</div>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="flex flex-col gap-0.5 text-sm leading-none">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between gap-2 text-xs leading-none sm:flex-col sm:items-start sm:gap-0.5 sm:text-sm">
             <span className="flex items-center gap-1 font-medium text-muted-foreground">
               <Package className="h-3.5 w-3.5 text-accent" />
-              {product.stock} remaining
+              {product.stock} left
             </span>
             <span
               className={`flex items-center gap-1 font-medium ${
@@ -60,12 +60,12 @@ export function ProductCard({ product }: { product: Product }) {
               {product.inStock ? "In Stock" : "Out of Stock"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 sm:justify-start">
             <button
               onClick={handleAdd}
               disabled={!product.inStock}
               aria-label="Add to cart"
-              className={`flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background transition hover:bg-secondary disabled:opacity-40 ${
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background transition hover:bg-secondary disabled:opacity-40 sm:h-9 sm:w-9 ${
                 bump ? "animate-cart-bump" : ""
               }`}
             >
@@ -74,7 +74,7 @@ export function ProductCard({ product }: { product: Product }) {
             <button
               onClick={handleBuy}
               disabled={!product.inStock}
-              className="flex h-9 items-center justify-center gap-1 rounded-lg bg-accent px-3 text-sm font-semibold text-accent-foreground transition hover:brightness-110 disabled:opacity-40"
+              className="flex h-8 items-center justify-center gap-1 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition hover:brightness-110 disabled:opacity-40 sm:h-9 sm:text-sm"
             >
               <Zap className="h-4 w-4" /> Buy
             </button>

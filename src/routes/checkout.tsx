@@ -70,7 +70,7 @@ function CheckoutPage() {
               <Field label="Phone" name="phone" type="tel" required />
               <Field label="Address" name="address" required className="sm:col-span-2" />
               <Field label="City" name="city" required />
-              <Field label="Country" name="country" required />
+              <Field label="Country" name="country" defaultValue="Rwanda" required />
             </div>
           </section>
 

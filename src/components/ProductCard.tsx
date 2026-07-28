@@ -30,7 +30,7 @@ export function ProductCard({ product }: { product: Product }) {
       params={{ id: product.slug }}
       className="group block rounded-2xl border border-border bg-card p-4 transition hover:shadow-lg hover:-translate-y-0.5"
     >
-      <div className="aspect-square overflow-hidden rounded-xl bg-secondary">
+      <div className="mx-auto w-[70%] overflow-hidden rounded-xl aspect-square bg-secondary">
         <img
           src={product.image}
           alt={product.name}
@@ -40,7 +40,7 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
       <div className="mt-4 space-y-2">
         <h3 className="line-clamp-2 min-h-[3rem] text-base font-semibold">{product.name}</h3>
-        <div className="text-2xl font-bold">${product.price.toLocaleString()}</div>
+        <div className="text-2xl font-bold">FRW {product.price.toLocaleString()}</div>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center justify-between gap-2 text-xs leading-none sm:flex-col sm:items-start sm:gap-0.5 sm:text-sm">
             <span className="flex items-center gap-1 font-medium text-muted-foreground">

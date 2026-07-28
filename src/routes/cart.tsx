@@ -59,9 +59,9 @@ function CartPage() {
                   >
                     {item.product.name}
                   </Link>
-                  <div className="mt-1 text-lg font-bold">
-                    ${(item.product.price * item.qty).toLocaleString()}
-                  </div>
+                    <div className="mt-1 text-lg font-bold">
+                      FRW {(item.product.price * item.qty).toLocaleString()}
+                    </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 rounded-full border border-border">
@@ -98,7 +98,7 @@ function CartPage() {
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Subtotal</dt>
-              <dd className="font-medium">${total.toLocaleString()}</dd>
+              <dd className="font-medium">FRW {total.toLocaleString()}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Shipping</dt>
@@ -106,7 +106,7 @@ function CartPage() {
             </div>
             <div className="mt-3 flex justify-between border-t border-border pt-3 text-base">
               <dt className="font-bold">Total</dt>
-              <dd className="text-xl font-black">${total.toLocaleString()}</dd>
+              <dd className="text-xl font-black">FRW {total.toLocaleString()}</dd>
             </div>
           </dl>
           <Link

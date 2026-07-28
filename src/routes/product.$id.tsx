@@ -88,7 +88,7 @@ function ProductPage() {
             </span>
           </div>
 
-          <div className="mt-6 text-5xl font-black">${product.price.toLocaleString()}</div>
+          <div className="mt-6 text-5xl font-black">FRW {product.price.toLocaleString()}</div>
 
           <div className="mt-6 space-y-2 text-sm">
             <div className="flex items-center gap-2">

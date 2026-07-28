@@ -135,14 +135,14 @@ function CheckoutPage() {
                   <div className="text-muted-foreground">Qty {i.qty}</div>
                 </div>
                 <div className="font-semibold">
-                  ${(i.product.price * i.qty).toLocaleString()}
+                  FRW {(i.product.price * i.qty).toLocaleString()}
                 </div>
               </li>
             ))}
           </ul>
           <div className="mt-4 flex justify-between border-t border-border pt-4">
             <span className="font-bold">Total</span>
-            <span className="text-xl font-black">${total.toLocaleString()}</span>
+            <span className="text-xl font-black">FRW {total.toLocaleString()}</span>
           </div>
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
           <button

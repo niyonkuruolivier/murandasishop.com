@@ -40,7 +40,7 @@ function Index() {
         ) : (
           <div className="grid grid-cols-2 gap-4 min-w-0 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
             {products.map((p) => (
-              <div key={p.id} className="min-w-0">
+              <div key={p.id} className="min-w-0 h-full">
                 <ProductCard product={p} />
               </div>
             ))}

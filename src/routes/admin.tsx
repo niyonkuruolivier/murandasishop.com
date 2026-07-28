@@ -394,11 +394,7 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
             onChange={(v) => setForm({ ...form, delivery: v })}
           />
           <div className="sm:col-span-2 space-y-2">
-            <TextField
-              label="Main image URL"
-              value={form.image}
-              onChange={(v) => setForm({ ...form, image: v })}
-            />
+            <span className="text-sm font-medium">Main image</span>
             <div className="flex items-center gap-3">
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-semibold hover:bg-secondary/70">
                 <Plus className="h-4 w-4" />
@@ -462,23 +458,7 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
                   ))}
               </div>
             )}
-            <textarea
-              value={form.images}
-              onChange={(e) => setForm({ ...form, images: e.target.value })}
-              rows={3}
-              placeholder="Or paste image URLs, one per line"
-              className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs"
-            />
           </div>
-          <label className="block sm:col-span-2">
-            <span className="text-sm font-medium">Specs (JSON)</span>
-            <textarea
-              value={form.specs}
-              onChange={(e) => setForm({ ...form, specs: e.target.value })}
-              rows={5}
-              className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs"
-            />
-          </label>
         </div>
 
         {error && <p className="mt-3 text-sm text-destructive">{error}</p>}

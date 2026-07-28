@@ -33,7 +33,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "products" | "orders" | "categories" | "analytics";
+type Tab = "products" | "orders" | "categories" | "hero" | "analytics";
 
 function AdminPage() {
   const { user, loading } = useAuth();
@@ -91,6 +91,7 @@ function AdminPage() {
             { id: "products", label: "Products", icon: Package },
             { id: "orders", label: "Orders", icon: ShoppingBag },
             { id: "categories", label: "Categories", icon: LayoutGrid },
+            { id: "hero", label: "Hero", icon: ImageIcon },
             { id: "analytics", label: "Analytics", icon: BarChart3 },
           ] as const
         ).map((t) => (
@@ -111,6 +112,7 @@ function AdminPage() {
       {tab === "products" && <ProductsTab />}
       {tab === "orders" && <OrdersTab />}
       {tab === "categories" && <CategoriesTab />}
+      {tab === "hero" && <HeroTab />}
       {tab === "analytics" && <AnalyticsTab />}
 
       <p className="mt-8 text-center text-xs text-muted-foreground">

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { useCategories } from "@/lib/products";
 import { useIsAdmin } from "@/lib/auth";
+import logo from "@/assets/murandasi-logo.png.asset.json";
 
 export function Header() {
   const { count } = useCart();

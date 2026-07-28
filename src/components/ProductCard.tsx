@@ -41,41 +41,44 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="mt-4 space-y-2">
         <h3 className="line-clamp-2 min-h-[3rem] text-base font-semibold">{product.name}</h3>
         <div className="text-2xl font-bold">${product.price.toLocaleString()}</div>
-        <div className="flex items-center justify-between gap-2 text-sm">
-          <span className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
-            <Package className="h-4 w-4 text-accent" />
-            {product.stock} remaining
-          </span>
-          <span
-            className={`flex items-center gap-1.5 font-medium ${
-              product.inStock ? "text-success" : "text-destructive"
-            }`}
-          >
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="flex flex-col gap-0.5 text-sm leading-none">
+            <span className="flex items-center gap-1 font-medium text-muted-foreground">
+              <Package className="h-3.5 w-3.5 text-accent" />
+              {product.stock} remaining
+            </span>
             <span
-              className={`h-2 w-2 rounded-full ${
-                product.inStock ? "bg-success" : "bg-destructive"
+              className={`flex items-center gap-1 font-medium ${
+                product.inStock ? "text-success" : "text-destructive"
               }`}
-            />
-            {product.inStock ? "In Stock" : "Out of Stock"}
-          </span>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button
-            onClick={handleAdd}
-            disabled={!product.inStock}
-            className={`flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background py-2.5 text-sm font-semibold transition hover:bg-secondary disabled:opacity-40 ${
-              bump ? "animate-cart-bump" : ""
-            }`}
-          >
-            <ShoppingCart className="h-4 w-4" /> Add
-          </button>
-          <button
-            onClick={handleBuy}
-            disabled={!product.inStock}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-accent py-2.5 text-sm font-semibold text-accent-foreground transition hover:brightness-110 disabled:opacity-40"
-          >
-            <Zap className="h-4 w-4" /> Buy Now
-          </button>
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  product.inStock ? "bg-success" : "bg-destructive"
+                }`}
+              />
+              {product.inStock ? "In Stock" : "Out of Stock"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleAdd}
+              disabled={!product.inStock}
+              aria-label="Add to cart"
+              className={`flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background transition hover:bg-secondary disabled:opacity-40 ${
+                bump ? "animate-cart-bump" : ""
+              }`}
+            >
+              <ShoppingCart className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleBuy}
+              disabled={!product.inStock}
+              className="flex h-9 items-center justify-center gap-1 rounded-lg bg-accent px-3 text-sm font-semibold text-accent-foreground transition hover:brightness-110 disabled:opacity-40"
+            >
+              <Zap className="h-4 w-4" /> Buy
+            </button>
+          </div>
         </div>
       </div>
     </Link>

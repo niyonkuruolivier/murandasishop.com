@@ -2,6 +2,7 @@ import { createFileRoute, notFound, useNavigate, Link } from "@tanstack/react-ro
 import { getProduct } from "@/lib/products";
 import { useCart } from "@/lib/cart";
 import { useState } from "react";
+import { ProductGallery } from "@/components/ProductGallery";
 import {
   Star,
   ShoppingCart,

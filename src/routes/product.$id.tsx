@@ -12,7 +12,9 @@ import {
   RotateCcw,
   BadgeCheck,
   ChevronDown,
+  MessageCircle,
 } from "lucide-react";
+import { whatsappUrl, productMessage } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/product/$id")({
   loader: ({ params }) => {
@@ -116,6 +118,18 @@ function ProductPage() {
               <Zap className="h-5 w-5" /> Buy Now
             </button>
           </div>
+
+          <a
+            href={whatsappUrl(productMessage(product))}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={!product.inStock}
+            className={`mt-3 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-4 font-semibold text-white transition hover:brightness-110 ${
+              !product.inStock ? "pointer-events-none opacity-40" : ""
+            }`}
+          >
+            <MessageCircle className="h-5 w-5" /> Order via WhatsApp
+          </a>
 
           <div className="mt-10 rounded-2xl border border-border p-6">
             <h2 className="mb-4 text-lg font-bold">Why Buy This?</h2>

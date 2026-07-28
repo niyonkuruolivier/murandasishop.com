@@ -17,7 +17,7 @@ export function Hero() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
 
         {/* Content */}
-        <div className="relative flex min-h-[70vh] flex-col items-center justify-center px-5 py-16 text-center sm:min-h-[75vh] sm:px-8 sm:py-24">
+        <div className="relative flex min-h-[35vh] flex-col items-center justify-center px-5 py-12 text-center sm:min-h-[37.5vh] sm:px-8 sm:py-16">
           <div className="mx-auto max-w-[700px]">
             <h1 className="animate-hero-title text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl">
               Smart Electronics.

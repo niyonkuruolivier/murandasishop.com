@@ -60,9 +60,7 @@ function ProductPage() {
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-        <div className="overflow-hidden rounded-2xl bg-secondary">
-          <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
-        </div>
+        <ProductGallery images={product.images} alt={product.name} />
 
         <div>
           <h1 className="text-3xl font-black leading-tight sm:text-4xl">{product.name}</h1>

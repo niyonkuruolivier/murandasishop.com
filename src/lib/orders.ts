@@ -14,7 +14,7 @@ export type OrderInput = {
 };
 
 export async function createOrder(input: OrderInput) {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("orders")
     .insert({
       customer_name: input.customer_name,
@@ -26,9 +26,7 @@ export async function createOrder(input: OrderInput) {
       items: input.items as unknown as never,
       total: input.total,
       notes: input.notes ?? null,
-    })
-    .select()
-    .single();
+    });
   if (error) throw error;
-  return data;
+  return { ok: true };
 }

@@ -30,9 +30,56 @@ export type Product = {
 };
 
 const img = (id: string) =>
-  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=900&q=80`;
+  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=85`;
 
-export const products: Product[] = [
+// Extra image pool per category (used to guarantee 3+ preview images per product).
+const extras: Record<string, string[]> = {
+  phones: [
+    "1511707171634-5f897ff02aa9",
+    "1512499617640-c74ae3a79d37",
+    "1580910051074-3eb694886505",
+    "1567581935884-3349723552ca",
+    "1585060544812-6b45742d762f",
+  ],
+  laptops: [
+    "1496181133206-80ce9b88a853",
+    "1541807084-5c52b6b3adef",
+    "1484788984921-03950022c9ef",
+    "1531297484001-80022131f5a1",
+  ],
+  watches: [
+    "1523275335684-37898b6baf30",
+    "1508685096489-7aacd43bd3b1",
+    "1524805444758-089113d48a6d",
+    "1434493789847-2f02dc6ca35d",
+  ],
+  headphones: [
+    "1505740420928-5e560c06d30e",
+    "1546435770-a3e426bf472b",
+    "1484704849700-f032a568e944",
+    "1590658268037-6bf12165a8df",
+  ],
+  tvs: [
+    "1567690187548-f07b1d7bf5a9",
+    "1509281373149-e957c6296406",
+    "1552975084-6e027cd345c2",
+    "1461151304267-38535e780c79",
+  ],
+  gaming: [
+    "1493711662062-fa541adb3fc8",
+    "1550745165-9bc0b252726f",
+    "1580327344181-c1163234e5a0",
+    "1592840496694-26d035b52b48",
+  ],
+  accessories: [
+    "1625948515291-69613efd103f",
+    "1618384887929-16ec33fab9ef",
+    "1587202372775-e229f172b9d7",
+    "1608156639585-b3a032ef9689",
+  ],
+};
+
+const baseProducts: Omit<Product, "images">[] = [
   {
     id: "iphone-15-pro",
     name: "iPhone 15 Pro 256GB",
@@ -42,7 +89,6 @@ export const products: Product[] = [
     reviews: 1240,
     inStock: true,
     image: img("1696446701796-da61225697cc"),
-    images: [img("1696446701796-da61225697cc"), img("1592286927505-1def25115558")],
     warranty: "1 Year Apple Warranty",
     delivery: "2-3 days",
     specs: { Display: "6.1\" OLED", Chip: "A17 Pro", Storage: "256GB", Camera: "48MP Triple" },
@@ -56,7 +102,6 @@ export const products: Product[] = [
     reviews: 890,
     inStock: true,
     image: img("1610945265064-0e34e5519bbf"),
-    images: [img("1610945265064-0e34e5519bbf")],
     warranty: "1 Year Samsung Warranty",
     delivery: "2-3 days",
     specs: { Display: "6.8\" AMOLED", Chip: "Snapdragon 8 Gen 3", Storage: "512GB", Camera: "200MP" },
@@ -70,7 +115,6 @@ export const products: Product[] = [
     reviews: 512,
     inStock: false,
     image: img("1598327105666-5b89351aff97"),
-    images: [img("1598327105666-5b89351aff97")],
     warranty: "1 Year Google Warranty",
     delivery: "3-5 days",
     specs: { Display: "6.2\" OLED", Chip: "Tensor G3", Storage: "128GB", Camera: "50MP" },
@@ -84,7 +128,6 @@ export const products: Product[] = [
     reviews: 720,
     inStock: true,
     image: img("1517336714731-489689fd1ca8"),
-    images: [img("1517336714731-489689fd1ca8")],
     warranty: "1 Year Apple Warranty",
     delivery: "2-4 days",
     specs: { Display: "14\" Liquid Retina XDR", Chip: "Apple M3", RAM: "16GB", Storage: "512GB" },
@@ -98,7 +141,6 @@ export const products: Product[] = [
     reviews: 410,
     inStock: true,
     image: img("1588872657578-7efd1f1555ed"),
-    images: [img("1588872657578-7efd1f1555ed")],
     warranty: "2 Year Dell Warranty",
     delivery: "3-5 days",
     specs: { Display: "15.6\" OLED", CPU: "Intel i7", RAM: "16GB", Storage: "1TB SSD" },
@@ -112,7 +154,6 @@ export const products: Product[] = [
     reviews: 980,
     inStock: true,
     image: img("1546868871-7041f2a55e12"),
-    images: [img("1546868871-7041f2a55e12")],
     warranty: "1 Year Apple Warranty",
     delivery: "1-2 days",
     specs: { Display: "45mm Retina", Battery: "18 hours", GPS: "Yes", Water: "50m" },
@@ -126,7 +167,6 @@ export const products: Product[] = [
     reviews: 340,
     inStock: true,
     image: img("1579586337278-3befd40fd17a"),
-    images: [img("1579586337278-3befd40fd17a")],
     warranty: "1 Year Samsung Warranty",
     delivery: "2-3 days",
     specs: { Display: "44mm AMOLED", Battery: "40 hours", GPS: "Yes" },
@@ -140,7 +180,6 @@ export const products: Product[] = [
     reviews: 2100,
     inStock: true,
     image: img("1600294037681-c80b4cb5b434"),
-    images: [img("1600294037681-c80b4cb5b434")],
     warranty: "1 Year Apple Warranty",
     delivery: "1-2 days",
     specs: { Type: "In-Ear", ANC: "Yes", Battery: "6h + 24h case", Chip: "H2" },
@@ -154,7 +193,6 @@ export const products: Product[] = [
     reviews: 1580,
     inStock: true,
     image: img("1583394838336-acd977736f90"),
-    images: [img("1583394838336-acd977736f90")],
     warranty: "2 Year Sony Warranty",
     delivery: "2-3 days",
     specs: { Type: "Over-Ear", ANC: "Yes", Battery: "30 hours" },
@@ -168,7 +206,6 @@ export const products: Product[] = [
     reviews: 620,
     inStock: true,
     image: img("1593359677879-a4bb92f829d1"),
-    images: [img("1593359677879-a4bb92f829d1")],
     warranty: "2 Year LG Warranty",
     delivery: "5-7 days",
     specs: { Size: "55\"", Panel: "OLED", Resolution: "4K", HDR: "Dolby Vision" },
@@ -182,7 +219,6 @@ export const products: Product[] = [
     reviews: 430,
     inStock: false,
     image: img("1461151304267-38535e780c79"),
-    images: [img("1461151304267-38535e780c79")],
     warranty: "2 Year Samsung Warranty",
     delivery: "5-7 days",
     specs: { Size: "65\"", Panel: "QLED", Resolution: "4K", HDR: "HDR10+" },
@@ -196,7 +232,6 @@ export const products: Product[] = [
     reviews: 3200,
     inStock: true,
     image: img("1606813907291-d86efa9b94db"),
-    images: [img("1606813907291-d86efa9b94db")],
     warranty: "1 Year Sony Warranty",
     delivery: "2-3 days",
     specs: { Storage: "1TB SSD", Resolution: "4K 120Hz", Disc: "Yes" },
@@ -210,7 +245,6 @@ export const products: Product[] = [
     reviews: 2400,
     inStock: true,
     image: img("1621259182978-fbf93132d53d"),
-    images: [img("1621259182978-fbf93132d53d")],
     warranty: "1 Year Microsoft Warranty",
     delivery: "2-3 days",
     specs: { Storage: "1TB SSD", Resolution: "4K 120Hz" },
@@ -224,7 +258,6 @@ export const products: Product[] = [
     reviews: 5400,
     inStock: true,
     image: img("1583863788434-e58a36330cf0"),
-    images: [img("1583863788434-e58a36330cf0")],
     warranty: "18 Month Anker Warranty",
     delivery: "1-2 days",
     specs: { Power: "65W", Ports: "USB-C", Compatible: "Universal" },
@@ -238,12 +271,29 @@ export const products: Product[] = [
     reviews: 3800,
     inStock: true,
     image: img("1527814050087-3793815479db"),
-    images: [img("1527814050087-3793815479db")],
     warranty: "1 Year Logitech Warranty",
     delivery: "1-2 days",
     specs: { Type: "Wireless Mouse", DPI: "8000", Battery: "70 days" },
   },
 ];
+
+// Ensure every product has at least 4 preview images (main + 3 alts) using a
+// deterministic pool of category-relevant photos.
+export const products: Product[] = baseProducts.map((p, idx) => {
+  const pool = extras[p.category] ?? [];
+  const alts: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    const id = pool[(idx + i) % Math.max(pool.length, 1)];
+    if (id) alts.push(img(id));
+  }
+  const seen = new Set<string>();
+  const images = [p.image, ...alts].filter((u) => {
+    if (seen.has(u)) return false;
+    seen.add(u);
+    return true;
+  });
+  return { ...p, images };
+});
 
 export const getProduct = (id: string) => products.find((p) => p.id === id);
 export const getByCategory = (slug: string) =>

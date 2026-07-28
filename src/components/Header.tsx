@@ -47,9 +47,6 @@ export function Header() {
               </span>
             )}
           </Link>
-          <button className="hidden rounded-full p-3 hover:bg-secondary sm:block" aria-label="Account">
-            <User className="h-5 w-5" />
-          </button>
         </nav>
       </div>
 

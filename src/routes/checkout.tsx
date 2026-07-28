@@ -19,7 +19,8 @@ function CheckoutPage() {
   const { detailed, total, clear } = useCart();
   const navigate = useNavigate();
   const [done, setDone] = useState(false);
-  const [payment, setPayment] = useState("card");
+  const [payment, setPayment] = useState("mtn");
+
 
   if (done) {
     return (
@@ -77,9 +78,8 @@ function CheckoutPage() {
             <h2 className="mb-4 text-lg font-bold">Payment Method</h2>
             <div className="space-y-3">
               {[
-                { id: "card", label: "Credit / Debit Card" },
-                { id: "mobile", label: "Mobile Money" },
-                { id: "cod", label: "Cash on Delivery" },
+                { id: "mtn", label: "MTN Mobile Money" },
+                { id: "airtel", label: "Airtel Money" },
               ].map((m) => (
                 <label
                   key={m.id}

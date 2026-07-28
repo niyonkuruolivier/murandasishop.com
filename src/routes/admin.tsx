@@ -393,12 +393,28 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
             value={form.delivery}
             onChange={(v) => setForm({ ...form, delivery: v })}
           />
-          <TextField
-            label="Main image URL"
-            value={form.image}
-            onChange={(v) => setForm({ ...form, image: v })}
-            className="sm:col-span-2"
-          />
+          <div className="sm:col-span-2 space-y-2">
+            <TextField
+              label="Main image URL"
+              value={form.image}
+              onChange={(v) => setForm({ ...form, image: v })}
+            />
+            <div className="flex items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-semibold hover:bg-secondary/70">
+                <Plus className="h-4 w-4" />
+                Upload main image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleMainUpload(e.target.files?.[0])}
+                />
+              </label>
+              {form.image && (
+                <img src={form.image} alt="preview" className="h-12 w-12 rounded-lg object-cover" />
+              )}
+            </div>
+          </div>
           <label className="block sm:col-span-2">
             <span className="text-sm font-medium">Gallery images (one URL per line)</span>
             <textarea
@@ -407,6 +423,20 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
               rows={4}
               className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs"
             />
+            <div className="mt-2 flex items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-semibold hover:bg-secondary/70">
+                <Plus className="h-4 w-4" />
+                Upload gallery images
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleGalleryUpload(e.target.files)}
+                />
+              </label>
+              {uploading && <span className="text-xs text-muted-foreground">Uploading…</span>}
+            </div>
           </label>
           <label className="block sm:col-span-2">
             <span className="text-sm font-medium">Specs (JSON)</span>

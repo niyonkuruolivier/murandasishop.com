@@ -94,6 +94,7 @@ function AdminPage() {
           [
             { id: "products", label: "Products", icon: Package },
             { id: "orders", label: "Orders", icon: ShoppingBag },
+            { id: "payments", label: "Payment Verification", icon: ShieldCheck },
             { id: "categories", label: "Categories", icon: LayoutGrid },
             { id: "hero", label: "Hero", icon: ImageIcon },
             { id: "loyalty", label: "Loyalty", icon: Gift },

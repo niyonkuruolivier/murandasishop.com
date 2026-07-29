@@ -74,7 +74,7 @@ export function ProductCard({ product }: { product: Product }) {
             <button
               onClick={handleBuy}
               disabled={!product.inStock}
-              className="flex h-8 items-center justify-center gap-1 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition hover:brightness-110 disabled:opacity-40 sm:h-9 sm:text-sm"
+              className="flex h-8 items-center justify-center gap-1 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-40 sm:h-9 sm:text-sm"
             >
               <Zap className="h-4 w-4" /> Buy
             </button>

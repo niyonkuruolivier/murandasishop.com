@@ -10,6 +10,8 @@ export type Profile = {
   avatar_url: string | null;
   approved_purchases: number;
   total_spent: number;
+  reward_cycle_start: number;
+  gifts_claimed: number;
   created_at: string;
 };
 

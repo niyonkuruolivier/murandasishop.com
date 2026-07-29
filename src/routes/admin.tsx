@@ -583,6 +583,8 @@ function OrdersTab() {
                 className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusColor(o.status)}`}
               >
                 <option value="pending">Pending</option>
+                <option value="payment_verified">Payment Verified</option>
+                <option value="processing">Processing</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="approved">Approved</option>
                 <option value="shipped">Shipped</option>

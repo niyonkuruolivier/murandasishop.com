@@ -239,7 +239,7 @@ function CheckoutPage() {
             disabled={submitting}
             className="mt-6 w-full rounded-xl bg-accent py-4 text-base font-bold text-accent-foreground hover:brightness-110 disabled:opacity-60"
           >
-            {submitting ? "Placing…" : "Place Order"}
+            {submitting ? "Placing…" : (payment === "mtn" || payment === "airtel") ? "Continue to Payment" : "Place Order"}
           </button>
           <a
             href={whatsappUrl(

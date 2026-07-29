@@ -137,8 +137,11 @@ function CheckoutPage() {
           </section>
         </div>
 
-        <aside className="h-fit rounded-2xl border border-border bg-card p-6 lg:sticky lg:top-32">
+        <aside className="h-fit space-y-4 lg:sticky lg:top-32">
+          <RewardsProgress compact />
+          <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="text-lg font-bold">Order</h2>
+
           <ul className="mt-4 space-y-3 text-sm">
             {detailed.map((i) => (
               <li key={i.slug} className="flex items-center gap-3">

@@ -14,6 +14,8 @@ import {
   type Milestone,
 } from "@/lib/loyalty";
 import { uploadWhatsappProof } from "@/lib/upload";
+import { RewardsProgress } from "@/components/RewardsProgress";
+
 
 export const Route = createFileRoute("/account")({
   head: () => ({

@@ -21,7 +21,7 @@ export function Header() {
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
         <Link to="/" className="flex shrink-0 items-center gap-2 text-xl font-black tracking-tight">
           <img src={logo.url} alt="Murandasi Shop logo" className="h-9 w-9 object-contain" />
-          <span className="hidden sm:inline">Murandasi<span className="text-accent">.</span></span>
+          <span className="hidden sm:inline">Murandasi</span>
         </Link>
         <form onSubmit={submitSearch} className="relative flex-1 max-w-2xl">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />

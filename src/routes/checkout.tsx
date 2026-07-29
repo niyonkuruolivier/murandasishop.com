@@ -69,6 +69,7 @@ function CheckoutPage() {
         payment_method: payment,
         items,
         total,
+        notes: `Pay from: ${String(fd.get("pay_number") || "")}`,
       });
       clear();
       setDone(true);
@@ -120,6 +121,15 @@ function CheckoutPage() {
                   <span className="font-medium">{m.label}</span>
                 </label>
               ))}
+            </div>
+            <div className="mt-4">
+              <Field
+                label={`${payment === "airtel" ? "Airtel Money" : "MTN MoMo"} number you'll pay from`}
+                name="pay_number"
+                type="tel"
+                required
+                placeholder="07XXXXXXXX"
+              />
             </div>
           </section>
         </div>
@@ -185,6 +195,7 @@ function Field({
   required,
   className = "",
   defaultValue = "",
+  placeholder = "",
 }: {
   label: string;
   name: string;
@@ -192,6 +203,7 @@ function Field({
   required?: boolean;
   className?: string;
   defaultValue?: string;
+  placeholder?: string;
 }) {
   return (
     <label className={`block ${className}`}>
@@ -201,6 +213,7 @@ function Field({
         type={type}
         required={required}
         defaultValue={defaultValue}
+        placeholder={placeholder}
         className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 outline-none transition focus:border-accent"
       />
     </label>

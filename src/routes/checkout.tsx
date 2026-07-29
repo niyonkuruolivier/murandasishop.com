@@ -69,6 +69,7 @@ function CheckoutPage() {
         payment_method: payment,
         items,
         total,
+        notes: `Pay from: ${String(fd.get("pay_number") || "")}`,
       });
       clear();
       setDone(true);

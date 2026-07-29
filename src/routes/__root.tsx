@@ -15,6 +15,7 @@ import { CartProvider } from "../lib/cart";
 import { AuthProvider } from "../lib/auth";
 import { Header } from "../components/Header";
 import { CategoryBar } from "../components/CategoryBar";
+import { SupportChat } from "../components/SupportChat";
 import { supabase } from "../integrations/supabase/client";
 
 function NotFoundComponent() {
@@ -166,6 +167,7 @@ function RootComponent() {
             <CategoryBar />
             <div className="h-[9rem]" />
             <Outlet />
+            <SupportChat />
           </div>
         </CartProvider>
       </AuthProvider>

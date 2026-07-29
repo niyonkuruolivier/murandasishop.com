@@ -5,6 +5,7 @@ import { CheckCircle2, MessageCircle } from "lucide-react";
 import { whatsappUrl, cartMessage } from "@/lib/whatsapp";
 import { createOrder } from "@/lib/orders";
 import { RewardsProgress } from "@/components/RewardsProgress";
+import { PaymentVerification } from "@/components/PaymentVerification";
 
 
 export const Route = createFileRoute("/checkout")({
@@ -26,6 +27,51 @@ function CheckoutPage() {
   const [payment, setPayment] = useState("mtn");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [placed, setPlaced] = useState<
+    | null
+    | {
+        orderId: string | null;
+        amount: number;
+        name: string;
+        phone: string;
+      }
+  >(null);
+
+  if (placed) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-10">
+        <div className="mb-6 text-center">
+          <CheckCircle2 className="mx-auto h-14 w-14 text-success" />
+          <h1 className="mt-3 text-2xl font-black">Order placed</h1>
+          <p className="text-sm text-muted-foreground">
+            Complete your MTN Mobile Money payment below, then upload the confirmation.
+          </p>
+          {placed.orderId && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Order # <span className="font-mono font-semibold">{placed.orderId.slice(0, 8).toUpperCase()}</span>
+            </p>
+          )}
+        </div>
+        <PaymentVerification
+          amount={placed.amount}
+          orderId={placed.orderId}
+          defaultName={placed.name}
+          defaultPhone={placed.phone}
+          defaultOrderNumber={placed.orderId ? placed.orderId.slice(0, 8).toUpperCase() : ""}
+          onDone={() => setTimeout(() => setDone(true), 800)}
+        />
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => setDone(true)}
+            className="text-xs font-semibold text-muted-foreground underline"
+          >
+            Skip for now
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   if (done) {
     return (
@@ -61,27 +107,40 @@ function CheckoutPage() {
     setError(null);
     setSubmitting(true);
     const fd = new FormData(e.currentTarget);
+    const name = String(fd.get("name") || "");
+    const phone = String(fd.get("phone") || "");
+    const payFrom = String(fd.get("pay_number") || "");
     try {
-      await createOrder({
-        customer_name: String(fd.get("name") || ""),
-        phone: String(fd.get("phone") || ""),
+      const res = await createOrder({
+        customer_name: name,
+        phone,
         address: String(fd.get("address") || ""),
         city: String(fd.get("city") || ""),
         country: String(fd.get("country") || "Rwanda"),
         payment_method: payment,
         items,
         total,
-        notes: `Pay from: ${String(fd.get("pay_number") || "")}`,
+        notes: `Pay from: ${payFrom}`,
       });
       clear();
-      setDone(true);
-      setTimeout(() => navigate({ to: "/" }), 4000);
+      if (payment === "mtn") {
+        setPlaced({
+          orderId: res.id,
+          amount: total,
+          name,
+          phone: payFrom || phone,
+        });
+      } else {
+        setDone(true);
+        setTimeout(() => navigate({ to: "/" }), 4000);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not place order. Try again.");
     } finally {
       setSubmitting(false);
     }
   };
+
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">

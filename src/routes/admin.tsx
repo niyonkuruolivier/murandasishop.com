@@ -21,6 +21,8 @@ import { useAuth, useIsAdmin } from "@/lib/auth";
 import { useCategories } from "@/lib/products";
 import { uploadProductImage, uploadProductImages } from "@/lib/upload";
 import { LoyaltyTab } from "@/components/admin/LoyaltyTab";
+import { PaymentVerificationsTab } from "@/components/admin/PaymentVerificationsTab";
+import { ShieldCheck } from "lucide-react";
 import type { HeroSlide } from "@/components/Hero";
 
 export const Route = createFileRoute("/admin")({
@@ -35,7 +37,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "products" | "orders" | "categories" | "hero" | "loyalty" | "analytics";
+type Tab = "products" | "orders" | "payments" | "categories" | "hero" | "loyalty" | "analytics";
 
 function AdminPage() {
   const { user, loading } = useAuth();
@@ -92,6 +94,7 @@ function AdminPage() {
           [
             { id: "products", label: "Products", icon: Package },
             { id: "orders", label: "Orders", icon: ShoppingBag },
+            { id: "payments", label: "Payment Verification", icon: ShieldCheck },
             { id: "categories", label: "Categories", icon: LayoutGrid },
             { id: "hero", label: "Hero", icon: ImageIcon },
             { id: "loyalty", label: "Loyalty", icon: Gift },
@@ -114,6 +117,7 @@ function AdminPage() {
 
       {tab === "products" && <ProductsTab />}
       {tab === "orders" && <OrdersTab />}
+      {tab === "payments" && <PaymentVerificationsTab />}
       {tab === "categories" && <CategoriesTab />}
       {tab === "hero" && <HeroTab />}
       {tab === "loyalty" && <LoyaltyTab />}
@@ -579,6 +583,8 @@ function OrdersTab() {
                 className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusColor(o.status)}`}
               >
                 <option value="pending">Pending</option>
+                <option value="payment_verified">Payment Verified</option>
+                <option value="processing">Processing</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="approved">Approved</option>
                 <option value="shipped">Shipped</option>

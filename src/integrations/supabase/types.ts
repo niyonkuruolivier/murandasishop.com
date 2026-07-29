@@ -80,6 +80,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          link: string | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           address: string
@@ -95,6 +128,7 @@ export type Database = {
           status: string
           total: number
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           address: string
@@ -110,6 +144,7 @@ export type Database = {
           status?: string
           total: number
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           address?: string
@@ -125,6 +160,7 @@ export type Database = {
           status?: string
           total?: number
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -193,6 +229,122 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          approved_purchases: number
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          total_spent: number
+          updated_at: string
+        }
+        Insert: {
+          approved_purchases?: number
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          total_spent?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_purchases?: number
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          total_spent?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reward_claims: {
+        Row: {
+          admin_notes: string | null
+          claimed_at: string | null
+          created_at: string
+          id: string
+          milestone_id: string
+          redeemed_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          id?: string
+          milestone_id: string
+          redeemed_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          id?: string
+          milestone_id?: string
+          redeemed_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_claims_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "reward_milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_milestones: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          emoji: string
+          id: string
+          purchases_required: number
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          emoji?: string
+          id?: string
+          purchases_required: number
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          emoji?: string
+          id?: string
+          purchases_required?: number
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -214,6 +366,48 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_purchases: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          screenshot_url: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshot_url: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshot_url?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -225,6 +419,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      recount_and_unlock_rewards: {
+        Args: { _user_id: string }
+        Returns: undefined
       }
     }
     Enums: {

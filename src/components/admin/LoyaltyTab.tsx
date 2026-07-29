@@ -15,8 +15,7 @@ export function LoyaltyTab() {
       const { count, error } = await supabase
         .from("reward_claims")
         .select("id", { count: "exact", head: true })
-        .eq("status", "pending")
-        .is("milestone_id", null);
+        .eq("status", "pending");
       if (error) throw error;
       return count ?? 0;
     },
@@ -28,7 +27,7 @@ export function LoyaltyTab() {
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
-            { id: "gifts", label: "Gift Claims", badge: pendingCount },
+            { id: "gifts", label: "Reward Claims", badge: pendingCount },
             { id: "whatsapp", label: "WhatsApp Verifications", badge: 0 },
             { id: "milestones", label: "Milestones", badge: 0 },
             { id: "customers", label: "Customers", badge: 0 },
@@ -174,6 +173,7 @@ function WhatsappVerifications() {
 type GiftClaimRow = {
   id: string;
   user_id: string;
+  milestone_id: string | null;
   status: "pending" | "approved" | "rejected" | "delivered";
   cycle_index: number | null;
   rejection_reason: string | null;
@@ -181,6 +181,7 @@ type GiftClaimRow = {
   delivery_time: string | null;
   approved_at: string | null;
   created_at: string;
+  milestone: { id: string; title: string; emoji: string; purchases_required: number } | null;
   profile: {
     id: string;
     full_name: string | null;
@@ -210,9 +211,9 @@ function GiftClaims() {
       const { data, error } = await supabase
         .from("reward_claims")
         .select(
-          "id,user_id,status,cycle_index,rejection_reason,delivery_date,delivery_time,approved_at,created_at,profile:profiles(id,full_name,email,phone,approved_purchases)",
+          "id,user_id,milestone_id,status,cycle_index,rejection_reason,delivery_date,delivery_time,approved_at,created_at,milestone:reward_milestones(id,title,emoji,purchases_required),profile:profiles(id,full_name,email,phone,approved_purchases)",
         )
-        .is("milestone_id", null)
+        .in("status", ["pending", "approved", "rejected", "delivered"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       const claims = (data ?? []) as unknown as GiftClaimRow[];
@@ -287,7 +288,7 @@ function GiftClaims() {
         <div className="p-8 text-center text-muted-foreground">Loading…</div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-border p-8 text-center text-muted-foreground">
-          No gift claims match your filters.
+          No reward claims match your filters.
         </div>
       ) : (
         <ul className="space-y-3">
@@ -296,13 +297,17 @@ function GiftClaims() {
               key={c.id}
               className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4"
             >
-              <div className="text-3xl">🎁</div>
+              <div className="text-3xl">{c.milestone?.emoji ?? "🎁"}</div>
               <div className="min-w-0 flex-1">
                 <div className="font-bold">
                   {c.profile?.full_name || c.profile?.email || `User ${c.user_id.slice(0, 8)}…`}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {c.profile?.phone ?? "no phone"} · Cycle #{c.cycle_index} ·{" "}
+                  {c.profile?.phone ?? "no phone"} ·{" "}
+                  {c.milestone
+                    ? `${c.milestone.title} (${c.milestone.purchases_required} purchases)`
+                    : `Cycle #${c.cycle_index ?? "—"}`}
+                  {" · "}
                   {new Date(c.created_at).toLocaleString()}
                 </div>
               </div>
@@ -405,7 +410,7 @@ function GiftClaimDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border p-4">
-          <h3 className="text-lg font-bold">Gift claim details</h3>
+          <h3 className="text-lg font-bold">Reward claim details</h3>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-secondary">
             <X className="h-4 w-4" />
           </button>
@@ -424,7 +429,24 @@ function GiftClaimDialog({
           />
           <Row label="Total approved purchases" value={String(claim.profile?.approved_purchases ?? 0)} />
           <Row label="Customer ID" value={claim.user_id} />
-          <Row label="Cycle #" value={String(claim.cycle_index ?? "—")} />
+          <Row
+            label="Reward"
+            value={
+              claim.milestone
+                ? `${claim.milestone.emoji} ${claim.milestone.title} (${claim.milestone.purchases_required} purchases)`
+                : `Cycle #${claim.cycle_index ?? "—"}`
+            }
+          />
+          <Row
+            label="Eligibility check"
+            value={
+              claim.milestone
+                ? (claim.profile?.approved_purchases ?? 0) >= claim.milestone.purchases_required
+                  ? "✅ Meets required purchases"
+                  : "⚠️ Not enough approved purchases"
+                : "—"
+            }
+          />
           <Row label="Submitted" value={new Date(claim.created_at).toLocaleString()} />
           <Row
             label="Status"
@@ -497,7 +519,7 @@ function GiftClaimDialog({
                 onClick={() => setMode("approve")}
                 className="inline-flex items-center gap-1 rounded-lg bg-success px-4 py-2 text-sm font-bold text-success-foreground hover:brightness-110"
               >
-                <CheckCircle2 className="h-4 w-4" /> Confirm Gift
+                <CheckCircle2 className="h-4 w-4" /> Approve Reward
               </button>
               <button
                 onClick={() => setMode("reject")}
@@ -514,7 +536,7 @@ function GiftClaimDialog({
                 disabled={busy}
                 className="inline-flex items-center gap-1 rounded-lg bg-success px-4 py-2 text-sm font-bold text-success-foreground hover:brightness-110 disabled:opacity-60"
               >
-                <CheckCircle2 className="h-4 w-4" /> {busy ? "Confirming…" : "Confirm Gift"}
+                <CheckCircle2 className="h-4 w-4" /> {busy ? "Approving…" : "Approve Reward"}
               </button>
               <button
                 onClick={() => setMode("view")}

@@ -211,7 +211,7 @@ function CheckoutPage() {
         </div>
 
         <aside className="h-fit space-y-4 lg:sticky lg:top-32">
-          <RewardsProgress compact />
+          <RewardsProgress />
           <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="text-lg font-bold">Order</h2>
 

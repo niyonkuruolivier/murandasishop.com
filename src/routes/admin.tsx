@@ -97,7 +97,7 @@ function AdminPage() {
             { id: "payments", label: "Payment Verification", icon: ShieldCheck },
             { id: "categories", label: "Categories", icon: LayoutGrid },
             { id: "hero", label: "Hero", icon: ImageIcon },
-            { id: "loyalty", label: "Loyalty", icon: Gift },
+            { id: "loyalty", label: "Rewards", icon: Gift },
             { id: "analytics", label: "Analytics", icon: BarChart3 },
           ] as const
         ).map((t) => (

@@ -14,11 +14,13 @@ import {
   Image as ImageIcon,
   ArrowUp,
   ArrowDown,
+  Gift,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/lib/auth";
 import { useCategories } from "@/lib/products";
 import { uploadProductImage, uploadProductImages } from "@/lib/upload";
+import { LoyaltyTab } from "@/components/admin/LoyaltyTab";
 import type { HeroSlide } from "@/components/Hero";
 
 export const Route = createFileRoute("/admin")({
@@ -33,7 +35,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "products" | "orders" | "categories" | "hero" | "analytics";
+type Tab = "products" | "orders" | "categories" | "hero" | "loyalty" | "analytics";
 
 function AdminPage() {
   const { user, loading } = useAuth();
@@ -92,6 +94,7 @@ function AdminPage() {
             { id: "orders", label: "Orders", icon: ShoppingBag },
             { id: "categories", label: "Categories", icon: LayoutGrid },
             { id: "hero", label: "Hero", icon: ImageIcon },
+            { id: "loyalty", label: "Loyalty", icon: Gift },
             { id: "analytics", label: "Analytics", icon: BarChart3 },
           ] as const
         ).map((t) => (
@@ -113,6 +116,7 @@ function AdminPage() {
       {tab === "orders" && <OrdersTab />}
       {tab === "categories" && <CategoriesTab />}
       {tab === "hero" && <HeroTab />}
+      {tab === "loyalty" && <LoyaltyTab />}
       {tab === "analytics" && <AnalyticsTab />}
 
       <p className="mt-8 text-center text-xs text-muted-foreground">
@@ -576,6 +580,7 @@ function OrdersTab() {
               >
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
+                <option value="approved">Approved</option>
                 <option value="shipped">Shipped</option>
                 <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>

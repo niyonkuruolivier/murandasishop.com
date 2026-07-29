@@ -1,14 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Search, ShoppingCart, Home, LayoutDashboard } from "lucide-react";
+import { Search, ShoppingCart, Home, LayoutDashboard, User } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
-import { useIsAdmin } from "@/lib/auth";
+import { useAuth, useIsAdmin } from "@/lib/auth";
 import logo from "@/assets/murandasi-logo.png.asset.json";
 
 export function Header() {
   const { count } = useCart();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const { user } = useAuth();
   const { data: isAdmin } = useIsAdmin();
 
   const submitSearch = (e: React.FormEvent) => {
@@ -47,6 +48,14 @@ export function Header() {
               <LayoutDashboard className="h-5 w-5" />
             </Link>
           )}
+          <Link
+            to={user ? "/account" : "/auth"}
+            className="rounded-full p-3 hover:bg-secondary"
+            aria-label={user ? "My account" : "Sign in"}
+            title={user ? "My account & rewards" : "Sign in"}
+          >
+            <User className="h-5 w-5" />
+          </Link>
           <Link
             to="/cart"
             className="relative rounded-full p-3 hover:bg-secondary"

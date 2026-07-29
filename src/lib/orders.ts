@@ -14,6 +14,8 @@ export type OrderInput = {
 };
 
 export async function createOrder(input: OrderInput) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id ?? null;
   const { error } = await supabase
     .from("orders")
     .insert({
@@ -26,6 +28,7 @@ export async function createOrder(input: OrderInput) {
       items: input.items as unknown as never,
       total: input.total,
       notes: input.notes ?? null,
+      user_id: userId,
     });
   if (error) throw error;
   return { ok: true };

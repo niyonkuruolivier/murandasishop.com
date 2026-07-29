@@ -297,13 +297,17 @@ function GiftClaims() {
               key={c.id}
               className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4"
             >
-              <div className="text-3xl">🎁</div>
+              <div className="text-3xl">{c.milestone?.emoji ?? "🎁"}</div>
               <div className="min-w-0 flex-1">
                 <div className="font-bold">
                   {c.profile?.full_name || c.profile?.email || `User ${c.user_id.slice(0, 8)}…`}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {c.profile?.phone ?? "no phone"} · Cycle #{c.cycle_index} ·{" "}
+                  {c.profile?.phone ?? "no phone"} ·{" "}
+                  {c.milestone
+                    ? `${c.milestone.title} (${c.milestone.purchases_required} purchases)`
+                    : `Cycle #${c.cycle_index ?? "—"}`}
+                  {" · "}
                   {new Date(c.created_at).toLocaleString()}
                 </div>
               </div>

@@ -3,43 +3,41 @@ import { Gift } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useMyProfile, useMyClaims } from "@/lib/loyalty";
+import { useMyProfile } from "@/lib/loyalty";
 
 const GOAL = 10;
 
 export function RewardsProgress({ compact = false }: { compact?: boolean }) {
   const { user } = useAuth();
   const { data: profile } = useMyProfile();
-  const { data: claims = [] } = useMyClaims();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   if (!user) return null;
 
-  const raw = profile?.approved_purchases ?? 0;
-  const count = Math.min(raw, GOAL);
+  const approved = profile?.approved_purchases ?? 0;
+  const cycleStart = profile?.reward_cycle_start ?? 0;
+  const progress = Math.max(0, approved - cycleStart);
+  const count = Math.min(progress, GOAL);
   const pct = Math.round((count / GOAL) * 100);
-  const reached = raw >= GOAL;
-
-  const alreadyClaimed = claims.some(
-    (c) => c.status === "claimed" || c.status === "redeemed",
-  );
+  const reached = progress >= GOAL;
 
   const claim = async () => {
+    if (!profile) return;
     setBusy(true);
     setMsg(null);
     try {
-      const unlocked = claims.find((c) => c.status === "unlocked");
-      if (unlocked) {
-        const { error } = await supabase
-          .from("reward_claims")
-          .update({ status: "claimed", claimed_at: new Date().toISOString() })
-          .eq("id", unlocked.id);
-        if (error) throw error;
-        qc.invalidateQueries({ queryKey: ["my-claims"] });
-      }
-      setMsg("Your gift claim has been received. Our team will contact you shortly.");
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          reward_cycle_start: cycleStart + GOAL,
+          gifts_claimed: (profile.gifts_claimed ?? 0) + 1,
+        })
+        .eq("id", user.id);
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["my-profile"] });
+      setMsg("🎉 Gift claim received! Our team will contact you shortly. A new reward cycle has started.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Could not submit claim.");
     } finally {
@@ -74,12 +72,17 @@ export function RewardsProgress({ compact = false }: { compact?: boolean }) {
 
       {reached ? (
         <p className="mt-3 text-sm font-semibold">
-          Congratulations! You've reached {GOAL}/{GOAL} purchases.
+          Congratulations! You've reached {GOAL}/{GOAL} approved purchases.
         </p>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
-          You have completed {count}/{GOAL} purchases. Keep shopping to unlock
-          your gift!
+          You have completed {count} of {GOAL} purchases. Keep shopping to unlock your gift!
+        </p>
+      )}
+
+      {(profile?.gifts_claimed ?? 0) > 0 && !reached && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Gifts claimed so far: {profile?.gifts_claimed}
         </p>
       )}
 
@@ -87,10 +90,10 @@ export function RewardsProgress({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={claim}
-          disabled={busy || alreadyClaimed}
+          disabled={busy}
           className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 font-bold text-accent-foreground hover:brightness-110 disabled:opacity-60"
         >
-          🎁 {alreadyClaimed ? "Gift claimed" : busy ? "Claiming…" : "Claim Your Gift"}
+          🎁 {busy ? "Claiming…" : "Claim Your Gift"}
         </button>
       )}
 

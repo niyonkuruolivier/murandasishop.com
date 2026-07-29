@@ -91,8 +91,9 @@ function CheckoutPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Full Name" name="name" required />
               <Field label="Phone" name="phone" type="tel" required />
-              <Field label="Address" name="address" required className="sm:col-span-2" />
-              <Field label="City" name="city" required />
+              <Field label="Address" name="address" required className="sm:col-span-2" placeholder="e.g. Kacyiru, KG 123 St" />
+              <Field label="City" name="city" required placeholder="e.g. Kigali" />
+
               <Field label="Country" name="country" defaultValue="Rwanda" required />
             </div>
           </section>

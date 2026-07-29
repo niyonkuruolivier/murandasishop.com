@@ -89,31 +89,7 @@ function AdminPage() {
         </button>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-2 border-b border-border">
-        {(
-          [
-            { id: "products", label: "Products", icon: Package },
-            { id: "orders", label: "Orders", icon: ShoppingBag },
-            { id: "payments", label: "Payment Verification", icon: ShieldCheck },
-            { id: "categories", label: "Categories", icon: LayoutGrid },
-            { id: "hero", label: "Hero", icon: ImageIcon },
-            { id: "loyalty", label: "Rewards", icon: Gift },
-            { id: "analytics", label: "Analytics", icon: BarChart3 },
-          ] as const
-        ).map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${
-              tab === t.id
-                ? "border-accent text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <t.icon className="h-4 w-4" /> {t.label}
-          </button>
-        ))}
-      </div>
+      <AdminTabs tab={tab} setTab={setTab} />
 
       {tab === "products" && <ProductsTab />}
       {tab === "orders" && <OrdersTab />}

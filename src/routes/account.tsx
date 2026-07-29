@@ -214,63 +214,7 @@ function MilestoneList({ milestones, purchases }: { milestones: Milestone[]; pur
 }
 
 function Rewards() {
-  const qc = useQueryClient();
-  const { data: claims = [] } = useMyClaims();
-  const { data: milestones = [] } = useMilestones();
-  const byId = new Map(milestones.map((m) => [m.id, m]));
-
-  const claim = async (id: string) => {
-    await supabase.from("reward_claims").update({ status: "claimed", claimed_at: new Date().toISOString() }).eq("id", id);
-    qc.invalidateQueries({ queryKey: ["my-claims"] });
-  };
-
-  if (claims.length === 0) {
-    return (
-      <div className="rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground">
-        No rewards unlocked yet. Keep shopping to reach your first milestone!
-      </div>
-    );
-  }
-
-  return (
-    <ul className="space-y-3">
-      {claims.map((c) => {
-        const m = byId.get(c.milestone_id);
-        if (!m) return null;
-        return (
-          <li key={c.id} className="rounded-2xl border border-border bg-card p-5">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="text-4xl">{m.emoji}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-lg font-bold">{m.title}</div>
-                <div className="text-sm text-muted-foreground">{m.description}</div>
-              </div>
-              <div>
-                {c.status === "unlocked" && (
-                  <button
-                    onClick={() => claim(c.id)}
-                    className="rounded-xl bg-accent px-5 py-2.5 font-bold text-accent-foreground hover:brightness-110"
-                  >
-                    Claim
-                  </button>
-                )}
-                {c.status === "claimed" && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-accent px-3 py-1 text-xs font-semibold text-accent">
-                    <Clock className="h-3 w-3" /> Awaiting admin
-                  </span>
-                )}
-                {c.status === "redeemed" && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-success px-3 py-1 text-xs font-semibold text-success">
-                    <CheckCircle2 className="h-3 w-3" /> Redeemed
-                  </span>
-                )}
-              </div>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-  );
+  return <RewardsProgress />;
 }
 
 function MyOrders() {

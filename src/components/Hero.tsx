@@ -153,18 +153,6 @@ export function Hero() {
               <ChevronRight className="h-5 w-5" />
             </button>
 
-            <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2">
-              {slides.map((s, i) => (
-                <button
-                  key={s.id}
-                  onClick={() => setCurrent(i)}
-                  className={`h-2 rounded-full transition-all ${
-                    i === current ? "w-6 bg-accent" : "w-2 bg-white/50 hover:bg-white/75"
-                  }`}
-                  aria-label={`Go to slide ${i + 1}`}
-                />
-              ))}
-            </div>
           </>
         )}
       </div>

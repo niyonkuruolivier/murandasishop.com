@@ -4,6 +4,8 @@ import { useState } from "react";
 import { CheckCircle2, MessageCircle } from "lucide-react";
 import { whatsappUrl, cartMessage } from "@/lib/whatsapp";
 import { createOrder } from "@/lib/orders";
+import { RewardsProgress } from "@/components/RewardsProgress";
+
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({

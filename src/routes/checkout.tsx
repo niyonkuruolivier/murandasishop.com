@@ -188,7 +188,9 @@ function CheckoutPage() {
           <p className="mt-2 text-center text-xs text-muted-foreground">
             Chat directly with us to confirm your order
           </p>
+          </div>
         </aside>
+
       </form>
     </main>
   );

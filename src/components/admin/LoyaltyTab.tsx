@@ -429,7 +429,24 @@ function GiftClaimDialog({
           />
           <Row label="Total approved purchases" value={String(claim.profile?.approved_purchases ?? 0)} />
           <Row label="Customer ID" value={claim.user_id} />
-          <Row label="Cycle #" value={String(claim.cycle_index ?? "—")} />
+          <Row
+            label="Reward"
+            value={
+              claim.milestone
+                ? `${claim.milestone.emoji} ${claim.milestone.title} (${claim.milestone.purchases_required} purchases)`
+                : `Cycle #${claim.cycle_index ?? "—"}`
+            }
+          />
+          <Row
+            label="Eligibility check"
+            value={
+              claim.milestone
+                ? (claim.profile?.approved_purchases ?? 0) >= claim.milestone.purchases_required
+                  ? "✅ Meets required purchases"
+                  : "⚠️ Not enough approved purchases"
+                : "—"
+            }
+          />
           <Row label="Submitted" value={new Date(claim.created_at).toLocaleString()} />
           <Row
             label="Status"

@@ -1,40 +1,59 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Clock, Eye, Trash2, Plus, ArrowUp, ArrowDown, Pencil, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { signWhatsappProof } from "@/lib/upload";
 import type { Milestone, Profile, RewardClaim, WhatsappPurchase } from "@/lib/loyalty";
 
-type Sub = "whatsapp" | "milestones" | "claims" | "customers";
+type Sub = "whatsapp" | "gifts" | "milestones" | "customers";
 
 export function LoyaltyTab() {
-  const [sub, setSub] = useState<Sub>("whatsapp");
+  const [sub, setSub] = useState<Sub>("gifts");
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ["admin-pending-gift-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("reward_claims")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .is("milestone_id", null);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 15_000,
+  });
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
-            { id: "whatsapp", label: "WhatsApp Verifications" },
-            { id: "claims", label: "Reward Claims" },
-            { id: "milestones", label: "Milestones" },
-            { id: "customers", label: "Customers" },
+            { id: "gifts", label: "Gift Claims", badge: pendingCount },
+            { id: "whatsapp", label: "WhatsApp Verifications", badge: 0 },
+            { id: "milestones", label: "Milestones", badge: 0 },
+            { id: "customers", label: "Customers", badge: 0 },
           ] as const
         ).map((s) => (
           <button
             key={s.id}
             onClick={() => setSub(s.id)}
-            className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
               sub === s.id
                 ? "border-accent bg-accent/10 text-foreground"
                 : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
             {s.label}
+            {s.badge > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                {s.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
       {sub === "whatsapp" && <WhatsappVerifications />}
-      {sub === "claims" && <Claims />}
+      {sub === "gifts" && <GiftClaims />}
       {sub === "milestones" && <Milestones />}
       {sub === "customers" && <Customers />}
     </div>
@@ -152,65 +171,403 @@ function WhatsappVerifications() {
   );
 }
 
-function Claims() {
+type GiftClaimRow = {
+  id: string;
+  user_id: string;
+  status: "pending" | "approved" | "rejected" | "delivered";
+  cycle_index: number | null;
+  rejection_reason: string | null;
+  delivery_date: string | null;
+  delivery_time: string | null;
+  approved_at: string | null;
+  created_at: string;
+  profile: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+    approved_purchases: number;
+  } | null;
+  latest_order: { address: string | null; city: string | null } | null;
+};
+
+const STATUS_STYLES: Record<GiftClaimRow["status"], string> = {
+  pending: "border-accent text-accent bg-accent/10",
+  approved: "border-success text-success bg-success/10",
+  rejected: "border-destructive text-destructive bg-destructive/10",
+  delivered: "border-primary text-primary bg-primary/10",
+};
+
+function GiftClaims() {
   const qc = useQueryClient();
-  const { data: rows = [] } = useQuery({
-    queryKey: ["admin-claims"],
+  const [statusFilter, setStatusFilter] = useState<"all" | GiftClaimRow["status"]>("all");
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<GiftClaimRow | null>(null);
+
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ["admin-gift-claims"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reward_claims")
-        .select("*, milestone:reward_milestones(*)")
+        .select(
+          "id,user_id,status,cycle_index,rejection_reason,delivery_date,delivery_time,approved_at,created_at,profile:profiles(id,full_name,email,phone,approved_purchases)",
+        )
+        .is("milestone_id", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as (RewardClaim & { milestone: Milestone })[];
+      const claims = (data ?? []) as unknown as GiftClaimRow[];
+      // Fetch latest order address for each user in one go
+      const userIds = Array.from(new Set(claims.map((c) => c.user_id)));
+      if (userIds.length === 0) return claims;
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("user_id,address,city,created_at")
+        .in("user_id", userIds)
+        .order("created_at", { ascending: false });
+      const addressByUser = new Map<string, { address: string | null; city: string | null }>();
+      for (const o of orders ?? []) {
+        if (!addressByUser.has(o.user_id as string)) {
+          addressByUser.set(o.user_id as string, { address: o.address, city: o.city });
+        }
+      }
+      return claims.map((c) => ({ ...c, latest_order: addressByUser.get(c.user_id) ?? null }));
     },
   });
 
-  const setStatus = async (id: string, status: "unlocked" | "claimed" | "redeemed") => {
-    const patch =
-      status === "redeemed"
-        ? { status, redeemed_at: new Date().toISOString() }
-        : { status };
-    await supabase.from("reward_claims").update(patch).eq("id", id);
-    qc.invalidateQueries({ queryKey: ["admin-claims"] });
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (!q) return true;
+      const hay = [
+        r.profile?.full_name ?? "",
+        r.profile?.email ?? "",
+        r.profile?.phone ?? "",
+        new Date(r.created_at).toLocaleString(),
+        r.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [rows, statusFilter, search]);
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["admin-gift-claims"] });
+    qc.invalidateQueries({ queryKey: ["admin-pending-gift-count"] });
   };
 
-  if (rows.length === 0)
-    return (
-      <div className="rounded-2xl border border-border p-8 text-center text-muted-foreground">
-        No unlocked rewards yet.
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, phone, email, date…"
+          className="h-10 min-w-[240px] flex-1 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-accent"
+        />
+        <div className="flex flex-wrap gap-1">
+          {(["all", "pending", "approved", "rejected", "delivered"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize transition ${
+                statusFilter === s
+                  ? "border-accent bg-accent/10 text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
       </div>
-    );
+
+      {isLoading ? (
+        <div className="p-8 text-center text-muted-foreground">Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-border p-8 text-center text-muted-foreground">
+          No gift claims match your filters.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {filtered.map((c) => (
+            <li
+              key={c.id}
+              className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4"
+            >
+              <div className="text-3xl">🎁</div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold">
+                  {c.profile?.full_name || c.profile?.email || `User ${c.user_id.slice(0, 8)}…`}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {c.profile?.phone ?? "no phone"} · Cycle #{c.cycle_index} ·{" "}
+                  {new Date(c.created_at).toLocaleString()}
+                </div>
+              </div>
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[c.status]}`}
+              >
+                {c.status}
+              </span>
+              <button
+                onClick={() => setSelected(c)}
+                className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-secondary"
+              >
+                <Eye className="h-3 w-3" /> View
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {selected && (
+        <GiftClaimDialog
+          claim={selected}
+          onClose={() => setSelected(null)}
+          onChanged={() => {
+            refresh();
+            setSelected(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function GiftClaimDialog({
+  claim,
+  onClose,
+  onChanged,
+}: {
+  claim: GiftClaimRow;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [mode, setMode] = useState<"view" | "approve" | "reject">("view");
+  const [date, setDate] = useState(claim.delivery_date ?? "");
+  const [time, setTime] = useState(claim.delivery_time ?? "");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const approve = async () => {
+    if (!date || !time) {
+      setErr("Please enter delivery date and time.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    const { error } = await supabase
+      .from("reward_claims")
+      .update({ status: "approved", delivery_date: date, delivery_time: time })
+      .eq("id", claim.id);
+    setBusy(false);
+    if (error) return setErr(error.message);
+    onChanged();
+  };
+
+  const reject = async () => {
+    if (!reason.trim()) {
+      setErr("Please provide a reason for the customer.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    const { error } = await supabase
+      .from("reward_claims")
+      .update({ status: "rejected", rejection_reason: reason.trim() })
+      .eq("id", claim.id);
+    setBusy(false);
+    if (error) return setErr(error.message);
+    onChanged();
+  };
+
+  const markDelivered = async () => {
+    setBusy(true);
+    const { error } = await supabase
+      .from("reward_claims")
+      .update({ status: "delivered" })
+      .eq("id", claim.id);
+    setBusy(false);
+    if (error) return setErr(error.message);
+    onChanged();
+  };
 
   return (
-    <ul className="space-y-3">
-      {rows.map((c) => (
-        <li key={c.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
-          <div className="text-3xl">{c.milestone?.emoji}</div>
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold">{c.milestone?.title}</div>
-            <div className="text-xs text-muted-foreground">
-              User: {c.user_id.slice(0, 8)}… · {new Date(c.created_at).toLocaleString()}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <h3 className="text-lg font-bold">Gift claim details</h3>
+          <button onClick={onClose} className="rounded-full p-1 hover:bg-secondary">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-[70vh] space-y-3 overflow-y-auto p-5 text-sm">
+          <Row label="Full name" value={claim.profile?.full_name ?? "—"} />
+          <Row label="Phone" value={claim.profile?.phone ?? "—"} />
+          <Row label="Email" value={claim.profile?.email ?? "—"} />
+          <Row
+            label="Delivery address"
+            value={
+              claim.latest_order
+                ? [claim.latest_order.address, claim.latest_order.city].filter(Boolean).join(", ") || "—"
+                : "—"
+            }
+          />
+          <Row label="Total approved purchases" value={String(claim.profile?.approved_purchases ?? 0)} />
+          <Row label="Customer ID" value={claim.user_id} />
+          <Row label="Cycle #" value={String(claim.cycle_index ?? "—")} />
+          <Row label="Submitted" value={new Date(claim.created_at).toLocaleString()} />
+          <Row
+            label="Status"
+            value={
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_STYLES[claim.status]}`}
+              >
+                {claim.status}
+              </span>
+            }
+          />
+          {claim.status === "approved" && (
+            <Row
+              label="Delivery scheduled"
+              value={`${claim.delivery_date ?? "—"} at ${claim.delivery_time ?? "—"}`}
+            />
+          )}
+          {claim.status === "rejected" && (
+            <Row label="Rejection reason" value={claim.rejection_reason ?? "—"} />
+          )}
+
+          {mode === "approve" && (
+            <div className="rounded-xl border border-border bg-secondary/30 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                Enter delivery details
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-xs">Delivery date</span>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-2 text-sm"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs">Delivery time</span>
+                  <input
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-2 text-sm"
+                  />
+                </label>
+              </div>
             </div>
-          </div>
-          <select
-            value={c.status}
-            onChange={(e) => setStatus(c.id, e.target.value as "unlocked" | "claimed" | "redeemed")}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-              c.status === "redeemed"
-                ? "border-success text-success"
-                : c.status === "claimed"
-                  ? "border-accent text-accent"
-                  : "border-border text-muted-foreground"
-            }`}
+          )}
+          {mode === "reject" && (
+            <div className="rounded-xl border border-border bg-secondary/30 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                Rejection reason (shown to customer)
+              </p>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+                placeholder="e.g. Payment proof unclear, please resubmit."
+              />
+            </div>
+          )}
+          {err && <p className="text-sm text-destructive">{err}</p>}
+        </div>
+
+        <div className="flex flex-wrap gap-2 border-t border-border p-4">
+          {claim.status === "pending" && mode === "view" && (
+            <>
+              <button
+                onClick={() => setMode("approve")}
+                className="inline-flex items-center gap-1 rounded-lg bg-success px-4 py-2 text-sm font-bold text-success-foreground hover:brightness-110"
+              >
+                <CheckCircle2 className="h-4 w-4" /> Approve
+              </button>
+              <button
+                onClick={() => setMode("reject")}
+                className="inline-flex items-center gap-1 rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:brightness-110"
+              >
+                <XCircle className="h-4 w-4" /> Reject
+              </button>
+            </>
+          )}
+          {mode === "approve" && (
+            <>
+              <button
+                onClick={approve}
+                disabled={busy}
+                className="inline-flex items-center gap-1 rounded-lg bg-success px-4 py-2 text-sm font-bold text-success-foreground hover:brightness-110 disabled:opacity-60"
+              >
+                <CheckCircle2 className="h-4 w-4" /> {busy ? "Approving…" : "Confirm approval"}
+              </button>
+              <button
+                onClick={() => setMode("view")}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-semibold"
+              >
+                Back
+              </button>
+            </>
+          )}
+          {mode === "reject" && (
+            <>
+              <button
+                onClick={reject}
+                disabled={busy}
+                className="inline-flex items-center gap-1 rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:brightness-110 disabled:opacity-60"
+              >
+                <XCircle className="h-4 w-4" /> {busy ? "Rejecting…" : "Confirm rejection"}
+              </button>
+              <button
+                onClick={() => setMode("view")}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-semibold"
+              >
+                Back
+              </button>
+            </>
+          )}
+          {claim.status === "approved" && (
+            <button
+              onClick={markDelivered}
+              disabled={busy}
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:brightness-110 disabled:opacity-60"
+            >
+              📦 Mark as delivered
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="ml-auto rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary"
           >
-            <option value="unlocked">Unlocked</option>
-            <option value="claimed">Claimed</option>
-            <option value="redeemed">Redeemed</option>
-          </select>
-        </li>
-      ))}
-    </ul>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-border/50 pb-2 last:border-0">
+      <span className="text-xs font-semibold uppercase text-muted-foreground">{label}</span>
+      <span className="text-right text-sm">{value}</span>
+    </div>
   );
 }
 

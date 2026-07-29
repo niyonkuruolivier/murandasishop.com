@@ -117,6 +117,7 @@ function AdminPage() {
 
       {tab === "products" && <ProductsTab />}
       {tab === "orders" && <OrdersTab />}
+      {tab === "payments" && <PaymentVerificationsTab />}
       {tab === "categories" && <CategoriesTab />}
       {tab === "hero" && <HeroTab />}
       {tab === "loyalty" && <LoyaltyTab />}

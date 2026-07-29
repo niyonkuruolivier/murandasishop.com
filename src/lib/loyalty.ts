@@ -28,12 +28,17 @@ export type Milestone = {
 export type RewardClaim = {
   id: string;
   user_id: string;
-  milestone_id: string;
-  status: "unlocked" | "claimed" | "redeemed";
+  milestone_id: string | null;
+  status: "unlocked" | "claimed" | "redeemed" | "pending" | "approved" | "rejected" | "delivered";
   claimed_at: string | null;
   redeemed_at: string | null;
   admin_notes: string | null;
   created_at: string;
+  cycle_index: number | null;
+  rejection_reason: string | null;
+  delivery_date: string | null;
+  delivery_time: string | null;
+  approved_at: string | null;
 };
 
 export type WhatsappPurchase = {

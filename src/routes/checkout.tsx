@@ -121,6 +121,15 @@ function CheckoutPage() {
                 </label>
               ))}
             </div>
+            <div className="mt-4">
+              <Field
+                label={`${payment === "airtel" ? "Airtel Money" : "MTN MoMo"} number you'll pay from`}
+                name="pay_number"
+                type="tel"
+                required
+                placeholder="07XXXXXXXX"
+              />
+            </div>
           </section>
         </div>
 

@@ -336,8 +336,10 @@ export type Database = {
           created_at: string
           email: string | null
           full_name: string | null
+          gifts_claimed: number
           id: string
           phone: string | null
+          reward_cycle_start: number
           total_spent: number
           updated_at: string
         }
@@ -347,8 +349,10 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          gifts_claimed?: number
           id: string
           phone?: string | null
+          reward_cycle_start?: number
           total_spent?: number
           updated_at?: string
         }
@@ -358,8 +362,10 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          gifts_claimed?: number
           id?: string
           phone?: string | null
+          reward_cycle_start?: number
           total_spent?: number
           updated_at?: string
         }

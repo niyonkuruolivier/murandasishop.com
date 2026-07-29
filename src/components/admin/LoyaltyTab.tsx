@@ -497,7 +497,7 @@ function GiftClaimDialog({
                 onClick={() => setMode("approve")}
                 className="inline-flex items-center gap-1 rounded-lg bg-success px-4 py-2 text-sm font-bold text-success-foreground hover:brightness-110"
               >
-                <CheckCircle2 className="h-4 w-4" /> Approve
+                <CheckCircle2 className="h-4 w-4" /> Confirm Gift
               </button>
               <button
                 onClick={() => setMode("reject")}
@@ -514,7 +514,7 @@ function GiftClaimDialog({
                 disabled={busy}
                 className="inline-flex items-center gap-1 rounded-lg bg-success px-4 py-2 text-sm font-bold text-success-foreground hover:brightness-110 disabled:opacity-60"
               >
-                <CheckCircle2 className="h-4 w-4" /> {busy ? "Approving…" : "Confirm approval"}
+                <CheckCircle2 className="h-4 w-4" /> {busy ? "Confirming…" : "Confirm Gift"}
               </button>
               <button
                 onClick={() => setMode("view")}

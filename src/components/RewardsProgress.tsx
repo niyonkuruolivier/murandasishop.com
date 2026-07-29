@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useMyProfile } from "@/lib/loyalty";
 
-const GOAL = 10;
+const GOAL = 20;
 
 type CycleClaim = {
   id: string;
@@ -132,23 +132,28 @@ export function RewardsProgress({ compact = false }: { compact?: boolean }) {
         <div className="mt-4 flex items-start gap-2 rounded-xl border border-accent bg-accent/10 p-3 text-sm">
           <Clock className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
           <div>
-            <p className="font-semibold">Pending Approval</p>
-            <p className="text-muted-foreground">
-              Your gift claim has been submitted successfully. Please wait while our team reviews your request.
-            </p>
+            <p className="font-semibold">Gift claim submitted</p>
+            <p className="text-muted-foreground">Waiting for admin approval.</p>
           </div>
         </div>
       )}
 
       {status === "approved" && (
-        <div className="mt-4 rounded-xl border border-success bg-success/10 p-4 text-sm">
-          <p className="flex items-center gap-2 text-base font-bold">
-            <CheckCircle2 className="h-5 w-5 text-success" /> 🎉 Gift approved!
+        <div className="mt-4 rounded-2xl border-2 border-success bg-success/10 p-5 text-center">
+          <p className="text-2xl font-black">🎉 Congratulations!</p>
+          <p className="mt-2 text-sm font-semibold">
+            Your gift claim has been accepted successfully.
           </p>
-          <p className="mt-1 text-muted-foreground">
-            You will receive your gift on <strong>{cycleClaim?.delivery_date ?? "the scheduled date"}</strong> at{" "}
-            <strong>{cycleClaim?.delivery_time ?? "the scheduled time"}</strong>.
+          <p className="mt-1 text-sm text-muted-foreground">
+            We will contact you as soon as possible to arrange delivery or collection of your gift.
           </p>
+          <p className="mt-2 text-sm font-semibold">Thank you for being a valued customer! 💛</p>
+          {(cycleClaim?.delivery_date || cycleClaim?.delivery_time) && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Scheduled: <strong>{cycleClaim?.delivery_date ?? "TBD"}</strong>
+              {cycleClaim?.delivery_time ? <> at <strong>{cycleClaim.delivery_time}</strong></> : null}
+            </p>
+          )}
         </div>
       )}
 

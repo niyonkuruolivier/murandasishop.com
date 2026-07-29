@@ -10,6 +10,7 @@ import {
 type Props = {
   amount: number;
   orderId?: string | null;
+  resolveOrderId?: () => Promise<string | null>;
   defaultName?: string;
   defaultPhone?: string;
   defaultOrderNumber?: string;
@@ -19,6 +20,7 @@ type Props = {
 export function PaymentVerification({
   amount,
   orderId,
+  resolveOrderId,
   defaultName = "",
   defaultPhone = "",
   defaultOrderNumber = "",

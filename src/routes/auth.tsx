@@ -26,7 +26,7 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) navigate({ to: "/admin" });
+    if (user) navigate({ to: "/account" });
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,7 +45,7 @@ function AuthPage() {
         });
         if (error) throw error;
       }
-      navigate({ to: "/admin" });
+      navigate({ to: "/account" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -71,7 +71,7 @@ function AuthPage() {
           {mode === "signin" ? "Sign in" : "Create account"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {mode === "signin" ? "Admin dashboard access" : "First account becomes admin"}
+          {mode === "signin" ? "Access your rewards & orders" : "Join to earn rewards on every purchase"}
         </p>
 
         <button

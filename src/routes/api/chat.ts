@@ -2,7 +2,30 @@ import { createFileRoute } from "@tanstack/react-router";
 
 type Message = { role: "user" | "assistant" | "system"; content: string };
 
-const SYSTEM_PROMPT = `You are the friendly AI support assistant for Murandasi Shop, an online electronics store in Rwanda.
+type ProductRow = {
+  id: string;
+  slug: string;
+  name: string;
+  category_slug: string;
+  price: number;
+  stock: number;
+  in_stock: boolean;
+  warranty: string;
+  delivery: string;
+  specs: Record<string, string>;
+};
+
+function buildSystemPrompt(products: ProductRow[]) {
+  const productList = products
+    .map((p) => {
+      const specs = Object.entries(p.specs || {})
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("; ");
+      return `- ${p.name} (${p.category_slug}) — FRW ${p.price.toLocaleString()}, ${p.in_stock ? `${p.stock} in stock` : "out of stock"}${specs ? ` | Specs: ${specs}` : ""}`;
+    })
+    .join("\n");
+
+  return `You are the friendly AI support assistant for Murandasi Shop, an online electronics store in Rwanda.
 
 About the shop:
 - We sell phones, laptops, headphones, TVs, and other electronics.
@@ -11,11 +34,16 @@ About the shop:
 - Customers can also order via WhatsApp at +250788723098.
 - Delivery is available across Rwanda.
 
+Current product catalog (prices and stock are accurate; do not invent different values):
+${productList || "- No products loaded at the moment."}
+
 Your job:
 - Help customers find products, understand pricing, delivery, payment, and returns.
+- When a customer asks about a product, always mention its exact specs (e.g., screen size, RAM, storage, battery, camera, processor, etc.) from the catalog above.
 - Be brief, warm, and clear. Answer in the customer's language (English, French, or Kinyarwanda).
-- If you don't know a specific detail, tell them to contact us on WhatsApp: +250788723098.
-- Never invent product prices or stock — suggest they browse the shop or contact support.`;
+- If a product is not in the catalog or you don't know a specific detail, tell them to contact us on WhatsApp: +250788723098 or browse the shop.
+- Never invent product prices, stock, or specs — only use the data above.`;
+}
 
 export const Route = createFileRoute("/api/chat")({
   server: {
@@ -32,6 +60,20 @@ export const Route = createFileRoute("/api/chat")({
             return new Response(JSON.stringify({ error: "Missing LOVABLE_API_KEY" }), { status: 500 });
           }
 
+          // Fetch live product data so the assistant can answer with accurate specs and stock.
+          let products: ProductRow[] = [];
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data, error } = await supabaseAdmin
+              .from("products")
+              .select("id, slug, name, category_slug, price, stock, in_stock, warranty, delivery, specs");
+            if (error) throw error;
+            products = (data as ProductRow[]) || [];
+          } catch (dbErr) {
+            console.error("Support chat product fetch failed:", dbErr);
+            // Continue without product data; the prompt will note the catalog is empty.
+          }
+
           const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -40,7 +82,7 @@ export const Route = createFileRoute("/api/chat")({
             },
             body: JSON.stringify({
               model: "google/gemini-3.6-flash",
-              messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+              messages: [{ role: "system", content: buildSystemPrompt(products) }, ...messages],
             }),
           });
 

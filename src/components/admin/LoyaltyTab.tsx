@@ -166,9 +166,11 @@ function Claims() {
     },
   });
 
-  const setStatus = async (id: string, status: string) => {
-    const patch: Record<string, unknown> = { status };
-    if (status === "redeemed") patch.redeemed_at = new Date().toISOString();
+  const setStatus = async (id: string, status: "unlocked" | "claimed" | "redeemed") => {
+    const patch =
+      status === "redeemed"
+        ? { status, redeemed_at: new Date().toISOString() }
+        : { status };
     await supabase.from("reward_claims").update(patch).eq("id", id);
     qc.invalidateQueries({ queryKey: ["admin-claims"] });
   };

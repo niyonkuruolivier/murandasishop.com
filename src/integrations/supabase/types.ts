@@ -164,6 +164,106 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_verification_audit: {
+        Row: {
+          action: string
+          admin_email: string | null
+          admin_id: string | null
+          created_at: string
+          id: string
+          note: string | null
+          verification_id: string
+        }
+        Insert: {
+          action: string
+          admin_email?: string | null
+          admin_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          verification_id: string
+        }
+        Update: {
+          action?: string
+          admin_email?: string | null
+          admin_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          verification_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_verification_audit_verification_id_fkey"
+            columns: ["verification_id"]
+            isOneToOne: false
+            referencedRelation: "payment_verifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_verifications: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          created_at: string
+          customer_name: string
+          id: string
+          note: string | null
+          order_id: string | null
+          order_number: string | null
+          phone: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          screenshot_url: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          created_at?: string
+          customer_name: string
+          id?: string
+          note?: string | null
+          order_id?: string | null
+          order_number?: string | null
+          phone: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshot_url: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          customer_name?: string
+          id?: string
+          note?: string | null
+          order_id?: string | null
+          order_number?: string | null
+          phone?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshot_url?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_verifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_slug: string

@@ -1,40 +1,59 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Clock, Eye, Trash2, Plus, ArrowUp, ArrowDown, Pencil, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { signWhatsappProof } from "@/lib/upload";
 import type { Milestone, Profile, RewardClaim, WhatsappPurchase } from "@/lib/loyalty";
 
-type Sub = "whatsapp" | "milestones" | "claims" | "customers";
+type Sub = "whatsapp" | "gifts" | "milestones" | "customers";
 
 export function LoyaltyTab() {
-  const [sub, setSub] = useState<Sub>("whatsapp");
+  const [sub, setSub] = useState<Sub>("gifts");
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ["admin-pending-gift-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("reward_claims")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .is("milestone_id", null);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 15_000,
+  });
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
-            { id: "whatsapp", label: "WhatsApp Verifications" },
-            { id: "claims", label: "Reward Claims" },
-            { id: "milestones", label: "Milestones" },
-            { id: "customers", label: "Customers" },
+            { id: "gifts", label: "Gift Claims", badge: pendingCount },
+            { id: "whatsapp", label: "WhatsApp Verifications", badge: 0 },
+            { id: "milestones", label: "Milestones", badge: 0 },
+            { id: "customers", label: "Customers", badge: 0 },
           ] as const
         ).map((s) => (
           <button
             key={s.id}
             onClick={() => setSub(s.id)}
-            className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
               sub === s.id
                 ? "border-accent bg-accent/10 text-foreground"
                 : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
             {s.label}
+            {s.badge > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                {s.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
       {sub === "whatsapp" && <WhatsappVerifications />}
-      {sub === "claims" && <Claims />}
+      {sub === "gifts" && <GiftClaims />}
       {sub === "milestones" && <Milestones />}
       {sub === "customers" && <Customers />}
     </div>

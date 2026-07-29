@@ -288,7 +288,7 @@ function GiftClaims() {
         <div className="p-8 text-center text-muted-foreground">Loading…</div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-border p-8 text-center text-muted-foreground">
-          No gift claims match your filters.
+          No reward claims match your filters.
         </div>
       ) : (
         <ul className="space-y-3">
@@ -410,7 +410,7 @@ function GiftClaimDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border p-4">
-          <h3 className="text-lg font-bold">Gift claim details</h3>
+          <h3 className="text-lg font-bold">Reward claim details</h3>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-secondary">
             <X className="h-4 w-4" />
           </button>

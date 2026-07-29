@@ -89,31 +89,7 @@ function AdminPage() {
         </button>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-2 border-b border-border">
-        {(
-          [
-            { id: "products", label: "Products", icon: Package },
-            { id: "orders", label: "Orders", icon: ShoppingBag },
-            { id: "payments", label: "Payment Verification", icon: ShieldCheck },
-            { id: "categories", label: "Categories", icon: LayoutGrid },
-            { id: "hero", label: "Hero", icon: ImageIcon },
-            { id: "loyalty", label: "Rewards", icon: Gift },
-            { id: "analytics", label: "Analytics", icon: BarChart3 },
-          ] as const
-        ).map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${
-              tab === t.id
-                ? "border-accent text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <t.icon className="h-4 w-4" /> {t.label}
-          </button>
-        ))}
-      </div>
+      <AdminTabs tab={tab} setTab={setTab} />
 
       {tab === "products" && <ProductsTab />}
       {tab === "orders" && <OrdersTab />}
@@ -129,6 +105,68 @@ function AdminPage() {
     </main>
   );
 }
+// ============= TABS =============
+function useAdminBadges() {
+  return useQuery({
+    queryKey: ["admin-badges"],
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const [orders, payments, claims, wa] = await Promise.all([
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase
+          .from("payment_verifications")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase.from("reward_claims").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase
+          .from("whatsapp_purchases")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+      ]);
+      return {
+        orders: orders.count ?? 0,
+        payments: payments.count ?? 0,
+        rewards: (claims.count ?? 0) + (wa.count ?? 0),
+      };
+    },
+  });
+}
+
+function AdminTabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
+  const { data: badges } = useAdminBadges();
+  const items = [
+    { id: "products" as const, label: "Products", icon: Package, badge: 0 },
+    { id: "orders" as const, label: "Orders", icon: ShoppingBag, badge: badges?.orders ?? 0 },
+    { id: "payments" as const, label: "Payment Verification", icon: ShieldCheck, badge: badges?.payments ?? 0 },
+    { id: "categories" as const, label: "Categories", icon: LayoutGrid, badge: 0 },
+    { id: "hero" as const, label: "Hero", icon: ImageIcon, badge: 0 },
+    { id: "loyalty" as const, label: "Rewards", icon: Gift, badge: badges?.rewards ?? 0 },
+    { id: "analytics" as const, label: "Analytics", icon: BarChart3, badge: 0 },
+  ];
+  return (
+    <div className="mb-6 flex flex-wrap gap-2 border-b border-border">
+      {items.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => setTab(t.id)}
+          className={`relative inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${
+            tab === t.id
+              ? "border-accent text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <t.icon className="h-4 w-4" /> {t.label}
+          {t.badge > 0 && (
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+              {t.badge}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 
 // ============= PRODUCTS =============
 type ProductRow = {

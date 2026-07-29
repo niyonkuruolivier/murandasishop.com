@@ -9,18 +9,22 @@ type Sub = "whatsapp" | "gifts" | "milestones" | "customers";
 
 export function LoyaltyTab() {
   const [sub, setSub] = useState<Sub>("gifts");
-  const { data: pendingCount = 0 } = useQuery({
-    queryKey: ["admin-pending-gift-count"],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("reward_claims")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-      if (error) throw error;
-      return count ?? 0;
-    },
+  const { data: counts } = useQuery({
+    queryKey: ["admin-rewards-sub-counts"],
     refetchInterval: 15_000,
+    queryFn: async () => {
+      const [claims, wa] = await Promise.all([
+        supabase.from("reward_claims").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase
+          .from("whatsapp_purchases")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+      ]);
+      return { gifts: claims.count ?? 0, whatsapp: wa.count ?? 0 };
+    },
   });
+  const pendingCount = counts?.gifts ?? 0;
+  const pendingWa = counts?.whatsapp ?? 0;
 
   return (
     <div>
@@ -28,7 +32,7 @@ export function LoyaltyTab() {
         {(
           [
             { id: "gifts", label: "Reward Claims", badge: pendingCount },
-            { id: "whatsapp", label: "WhatsApp Verifications", badge: 0 },
+            { id: "whatsapp", label: "WhatsApp Verifications", badge: pendingWa },
             { id: "milestones", label: "Milestones", badge: 0 },
             { id: "customers", label: "Customers", badge: 0 },
           ] as const
@@ -207,31 +211,43 @@ function GiftClaims() {
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["admin-gift-claims"],
+    refetchInterval: 15_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reward_claims")
         .select(
-          "id,user_id,milestone_id,status,cycle_index,rejection_reason,delivery_date,delivery_time,approved_at,created_at,milestone:reward_milestones(id,title,emoji,purchases_required),profile:profiles(id,full_name,email,phone,approved_purchases)",
+          "id,user_id,milestone_id,status,cycle_index,rejection_reason,delivery_date,delivery_time,approved_at,created_at,milestone:reward_milestones(id,title,emoji,purchases_required)",
         )
         .in("status", ["pending", "approved", "rejected", "delivered"])
         .order("created_at", { ascending: false });
       if (error) throw error;
-      const claims = (data ?? []) as unknown as GiftClaimRow[];
-      // Fetch latest order address for each user in one go
-      const userIds = Array.from(new Set(claims.map((c) => c.user_id)));
-      if (userIds.length === 0) return claims;
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("user_id,address,city,created_at")
-        .in("user_id", userIds)
-        .order("created_at", { ascending: false });
+      const base = (data ?? []) as unknown as Omit<GiftClaimRow, "profile" | "latest_order">[];
+      if (base.length === 0) return [] as GiftClaimRow[];
+      const userIds = Array.from(new Set(base.map((c) => c.user_id)));
+      const [{ data: profs }, { data: orders }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id,full_name,email,phone,approved_purchases")
+          .in("id", userIds),
+        supabase
+          .from("orders")
+          .select("user_id,address,city,created_at")
+          .in("user_id", userIds)
+          .order("created_at", { ascending: false }),
+      ]);
+      const profileByUser = new Map<string, GiftClaimRow["profile"]>();
+      for (const p of profs ?? []) profileByUser.set(p.id as string, p as GiftClaimRow["profile"]);
       const addressByUser = new Map<string, { address: string | null; city: string | null }>();
       for (const o of orders ?? []) {
         if (!addressByUser.has(o.user_id as string)) {
           addressByUser.set(o.user_id as string, { address: o.address, city: o.city });
         }
       }
-      return claims.map((c) => ({ ...c, latest_order: addressByUser.get(c.user_id) ?? null }));
+      return base.map((c) => ({
+        ...c,
+        profile: profileByUser.get(c.user_id) ?? null,
+        latest_order: addressByUser.get(c.user_id) ?? null,
+      })) as GiftClaimRow[];
     },
   });
 

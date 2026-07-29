@@ -5,6 +5,7 @@ import { CheckCircle2, MessageCircle } from "lucide-react";
 import { whatsappUrl, cartMessage } from "@/lib/whatsapp";
 import { createOrder } from "@/lib/orders";
 import { RewardsProgress } from "@/components/RewardsProgress";
+import { PaymentVerification } from "@/components/PaymentVerification";
 
 
 export const Route = createFileRoute("/checkout")({

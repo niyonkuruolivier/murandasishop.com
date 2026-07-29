@@ -15,8 +15,7 @@ export function LoyaltyTab() {
       const { count, error } = await supabase
         .from("reward_claims")
         .select("id", { count: "exact", head: true })
-        .eq("status", "pending")
-        .is("milestone_id", null);
+        .eq("status", "pending");
       if (error) throw error;
       return count ?? 0;
     },
@@ -28,7 +27,7 @@ export function LoyaltyTab() {
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
-            { id: "gifts", label: "Gift Claims", badge: pendingCount },
+            { id: "gifts", label: "Reward Claims", badge: pendingCount },
             { id: "whatsapp", label: "WhatsApp Verifications", badge: 0 },
             { id: "milestones", label: "Milestones", badge: 0 },
             { id: "customers", label: "Customers", badge: 0 },

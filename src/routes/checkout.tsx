@@ -27,46 +27,58 @@ function CheckoutPage() {
   const [payment, setPayment] = useState("mtn");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [placed, setPlaced] = useState<
+  const [pending, setPending] = useState<
     | null
     | {
-        orderId: string | null;
-        amount: number;
         name: string;
         phone: string;
+        address: string;
+        city: string;
+        country: string;
+        payFrom: string;
       }
   >(null);
 
-  if (placed) {
+  if (pending) {
+    const createOrderNow = async (): Promise<string | null> => {
+      const res = await createOrder({
+        customer_name: pending.name,
+        phone: pending.phone,
+        address: pending.address,
+        city: pending.city,
+        country: pending.country,
+        payment_method: "mtn",
+        items,
+        total,
+        notes: `Pay from: ${pending.payFrom}`,
+      });
+      clear();
+      return res.id;
+    };
+
     return (
       <main className="mx-auto max-w-2xl px-4 py-10">
         <div className="mb-6 text-center">
-          <CheckCircle2 className="mx-auto h-14 w-14 text-success" />
-          <h1 className="mt-3 text-2xl font-black">Order placed</h1>
+          <h1 className="mt-3 text-2xl font-black">Complete your payment</h1>
           <p className="text-sm text-muted-foreground">
-            Complete your MTN Mobile Money payment below, then upload the confirmation.
+            Pay with MTN Mobile Money and upload your confirmation. Your order is only submitted
+            after you send the payment proof.
           </p>
-          {placed.orderId && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Order # <span className="font-mono font-semibold">{placed.orderId.slice(0, 8).toUpperCase()}</span>
-            </p>
-          )}
         </div>
         <PaymentVerification
-          amount={placed.amount}
-          orderId={placed.orderId}
-          defaultName={placed.name}
-          defaultPhone={placed.phone}
-          defaultOrderNumber={placed.orderId ? placed.orderId.slice(0, 8).toUpperCase() : ""}
+          amount={total}
+          defaultName={pending.name}
+          defaultPhone={pending.payFrom || pending.phone}
+          resolveOrderId={createOrderNow}
           onDone={() => setTimeout(() => setDone(true), 800)}
         />
         <div className="mt-4 text-center">
           <button
             type="button"
-            onClick={() => setDone(true)}
+            onClick={() => setPending(null)}
             className="text-xs font-semibold text-muted-foreground underline"
           >
-            Skip for now
+            Back to checkout
           </button>
         </div>
       </main>
@@ -77,9 +89,9 @@ function CheckoutPage() {
     return (
       <main className="mx-auto max-w-2xl px-4 py-20 text-center">
         <CheckCircle2 className="mx-auto h-20 w-20 text-success" />
-        <h1 className="mt-6 text-3xl font-black">Order placed!</h1>
+        <h1 className="mt-6 text-3xl font-black">Order submitted!</h1>
         <p className="mt-2 text-muted-foreground">
-          Thank you. We've received your order and will deliver soon.
+          Thank you. We've received your payment proof and will verify it shortly.
         </p>
         <Link
           to="/"
@@ -105,41 +117,43 @@ function CheckoutPage() {
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    setSubmitting(true);
     const fd = new FormData(e.currentTarget);
     const name = String(fd.get("name") || "");
     const phone = String(fd.get("phone") || "");
+    const address = String(fd.get("address") || "");
+    const city = String(fd.get("city") || "");
+    const country = String(fd.get("country") || "Rwanda");
     const payFrom = String(fd.get("pay_number") || "");
+
+    if (payment === "mtn" || payment === "airtel") {
+      // Defer order creation until payment proof is submitted.
+      setPending({ name, phone, address, city, country, payFrom });
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      const res = await createOrder({
+      await createOrder({
         customer_name: name,
         phone,
-        address: String(fd.get("address") || ""),
-        city: String(fd.get("city") || ""),
-        country: String(fd.get("country") || "Rwanda"),
+        address,
+        city,
+        country,
         payment_method: payment,
         items,
         total,
         notes: `Pay from: ${payFrom}`,
       });
       clear();
-      if (payment === "mtn") {
-        setPlaced({
-          orderId: res.id,
-          amount: total,
-          name,
-          phone: payFrom || phone,
-        });
-      } else {
-        setDone(true);
-        setTimeout(() => navigate({ to: "/" }), 4000);
-      }
+      setDone(true);
+      setTimeout(() => navigate({ to: "/" }), 4000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not place order. Try again.");
     } finally {
       setSubmitting(false);
     }
   };
+
 
 
   return (

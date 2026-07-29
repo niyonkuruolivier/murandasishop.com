@@ -65,6 +65,10 @@
   * {
     border-color: var(--color-border);
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   html, body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -72,6 +76,15 @@
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
+  /* Prevent iOS auto-zoom on focus (inputs must be >= 16px) */
+  input, select, textarea {
+    font-size: 16px;
+  }
+  /* Prevent double-tap zoom on taps */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+  img, video { max-width: 100%; height: auto; }
 }
 
 @keyframes cart-bump {

@@ -9,18 +9,22 @@ type Sub = "whatsapp" | "gifts" | "milestones" | "customers";
 
 export function LoyaltyTab() {
   const [sub, setSub] = useState<Sub>("gifts");
-  const { data: pendingCount = 0 } = useQuery({
-    queryKey: ["admin-pending-gift-count"],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("reward_claims")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-      if (error) throw error;
-      return count ?? 0;
-    },
+  const { data: counts } = useQuery({
+    queryKey: ["admin-rewards-sub-counts"],
     refetchInterval: 15_000,
+    queryFn: async () => {
+      const [claims, wa] = await Promise.all([
+        supabase.from("reward_claims").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase
+          .from("whatsapp_purchases")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+      ]);
+      return { gifts: claims.count ?? 0, whatsapp: wa.count ?? 0 };
+    },
   });
+  const pendingCount = counts?.gifts ?? 0;
+  const pendingWa = counts?.whatsapp ?? 0;
 
   return (
     <div>
@@ -28,7 +32,7 @@ export function LoyaltyTab() {
         {(
           [
             { id: "gifts", label: "Reward Claims", badge: pendingCount },
-            { id: "whatsapp", label: "WhatsApp Verifications", badge: 0 },
+            { id: "whatsapp", label: "WhatsApp Verifications", badge: pendingWa },
             { id: "milestones", label: "Milestones", badge: 0 },
             { id: "customers", label: "Customers", badge: 0 },
           ] as const

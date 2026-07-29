@@ -173,6 +173,7 @@ function WhatsappVerifications() {
 type GiftClaimRow = {
   id: string;
   user_id: string;
+  milestone_id: string | null;
   status: "pending" | "approved" | "rejected" | "delivered";
   cycle_index: number | null;
   rejection_reason: string | null;
@@ -180,6 +181,7 @@ type GiftClaimRow = {
   delivery_time: string | null;
   approved_at: string | null;
   created_at: string;
+  milestone: { id: string; title: string; emoji: string; purchases_required: number } | null;
   profile: {
     id: string;
     full_name: string | null;
@@ -209,9 +211,9 @@ function GiftClaims() {
       const { data, error } = await supabase
         .from("reward_claims")
         .select(
-          "id,user_id,status,cycle_index,rejection_reason,delivery_date,delivery_time,approved_at,created_at,profile:profiles(id,full_name,email,phone,approved_purchases)",
+          "id,user_id,milestone_id,status,cycle_index,rejection_reason,delivery_date,delivery_time,approved_at,created_at,milestone:reward_milestones(id,title,emoji,purchases_required),profile:profiles(id,full_name,email,phone,approved_purchases)",
         )
-        .is("milestone_id", null)
+        .in("status", ["pending", "approved", "rejected", "delivered"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       const claims = (data ?? []) as unknown as GiftClaimRow[];

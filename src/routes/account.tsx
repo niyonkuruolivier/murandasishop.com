@@ -14,6 +14,8 @@ import {
   type Milestone,
 } from "@/lib/loyalty";
 import { uploadWhatsappProof } from "@/lib/upload";
+import { RewardsProgress } from "@/components/RewardsProgress";
+
 
 export const Route = createFileRoute("/account")({
   head: () => ({
@@ -123,11 +125,14 @@ function Overview() {
 
   return (
     <div className="space-y-6">
+      <RewardsProgress />
+
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Approved purchases" value={purchases} />
         <StatCard label="Total spent" value={`FRW ${Number(profile?.total_spent ?? 0).toLocaleString()}`} />
         <StatCard label="Rewards unlocked" value={claims.length} />
       </div>
+
 
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-center gap-3">

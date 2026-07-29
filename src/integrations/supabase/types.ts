@@ -374,33 +374,48 @@ export type Database = {
       reward_claims: {
         Row: {
           admin_notes: string | null
+          approved_at: string | null
           claimed_at: string | null
           created_at: string
+          cycle_index: number | null
+          delivery_date: string | null
+          delivery_time: string | null
           id: string
-          milestone_id: string
+          milestone_id: string | null
           redeemed_at: string | null
+          rejection_reason: string | null
           status: string
           updated_at: string
           user_id: string
         }
         Insert: {
           admin_notes?: string | null
+          approved_at?: string | null
           claimed_at?: string | null
           created_at?: string
+          cycle_index?: number | null
+          delivery_date?: string | null
+          delivery_time?: string | null
           id?: string
-          milestone_id: string
+          milestone_id?: string | null
           redeemed_at?: string | null
+          rejection_reason?: string | null
           status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           admin_notes?: string | null
+          approved_at?: string | null
           claimed_at?: string | null
           created_at?: string
+          cycle_index?: number | null
+          delivery_date?: string | null
+          delivery_time?: string | null
           id?: string
-          milestone_id?: string
+          milestone_id?: string | null
           redeemed_at?: string | null
+          rejection_reason?: string | null
           status?: string
           updated_at?: string
           user_id?: string

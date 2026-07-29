@@ -10,6 +10,7 @@ import {
 type Props = {
   amount: number;
   orderId?: string | null;
+  resolveOrderId?: () => Promise<string | null>;
   defaultName?: string;
   defaultPhone?: string;
   defaultOrderNumber?: string;
@@ -19,6 +20,7 @@ type Props = {
 export function PaymentVerification({
   amount,
   orderId,
+  resolveOrderId,
   defaultName = "",
   defaultPhone = "",
   defaultOrderNumber = "",
@@ -70,13 +72,14 @@ export function PaymentVerification({
     setSubmitting(true);
     try {
       const path = await uploadPaymentProof(file);
+      const resolvedOrderId = resolveOrderId ? await resolveOrderId() : (orderId ?? null);
       await submitPaymentVerification({
         customer_name: name,
         phone,
         amount,
         order_number: String(fd.get("order_number") || "") || undefined,
         note: String(fd.get("note") || "") || undefined,
-        order_id: orderId ?? null,
+        order_id: resolvedOrderId,
         screenshot_url: path,
       });
       setStage("done");

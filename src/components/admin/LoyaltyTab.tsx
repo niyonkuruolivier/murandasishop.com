@@ -195,7 +195,7 @@ function Claims() {
           </div>
           <select
             value={c.status}
-            onChange={(e) => setStatus(c.id, e.target.value)}
+            onChange={(e) => setStatus(c.id, e.target.value as "unlocked" | "claimed" | "redeemed")}
             className={`rounded-full border px-3 py-1 text-xs font-semibold ${
               c.status === "redeemed"
                 ? "border-success text-success"

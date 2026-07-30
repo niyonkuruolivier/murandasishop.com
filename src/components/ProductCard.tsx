@@ -41,6 +41,12 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="mt-4 flex flex-1 flex-col justify-between space-y-2">
         <h3 className="line-clamp-2 min-h-[3rem] text-base font-semibold">{product.name}</h3>
         <div className="text-lg font-black text-foreground">FRW {product.price.toLocaleString()}</div>
+        {product.cashbackPercent > 0 && (
+          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-[11px] font-bold text-accent">
+            💰 Earn {product.cashbackPercent}% Cashback
+          </span>
+        )}
+
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center justify-between gap-2 text-xs leading-none sm:flex-col sm:items-start sm:gap-0.5 sm:text-sm">
             <span className="flex items-center gap-1 font-medium text-muted-foreground">

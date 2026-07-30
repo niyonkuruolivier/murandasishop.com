@@ -62,7 +62,7 @@ function AccountPage() {
 
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_purchases", filter: `user_id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payment_verifications", filter: `user_id=eq.${user.id}` }, invalidate)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `user_id=eq.${user.id}` }, invalidate)
       .subscribe();
     // Also refetch when tab regains focus (fallback if realtime isn't enabled).
     const onFocus = () => invalidate();

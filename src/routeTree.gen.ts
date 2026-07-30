@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiPublicMomoWebhookRouteImport } from './routes/api/public/momo-webhook'
 
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
@@ -70,6 +71,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMomoWebhookRoute = ApiPublicMomoWebhookRouteImport.update({
+  id: '/api/public/momo-webhook',
+  path: '/api/public/momo-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/api/public/momo-webhook': typeof ApiPublicMomoWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/api/public/momo-webhook': typeof ApiPublicMomoWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/api/public/momo-webhook': typeof ApiPublicMomoWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/category/$slug'
     | '/product/$id'
+    | '/api/public/momo-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/category/$slug'
     | '/product/$id'
+    | '/api/public/momo-webhook'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/category/$slug'
     | '/product/$id'
+    | '/api/public/momo-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   CategorySlugRoute: typeof CategorySlugRoute
   ProductIdRoute: typeof ProductIdRoute
+  ApiPublicMomoWebhookRoute: typeof ApiPublicMomoWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/momo-webhook': {
+      id: '/api/public/momo-webhook'
+      path: '/api/public/momo-webhook'
+      fullPath: '/api/public/momo-webhook'
+      preLoaderRoute: typeof ApiPublicMomoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -246,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   CategorySlugRoute: CategorySlugRoute,
   ProductIdRoute: ProductIdRoute,
+  ApiPublicMomoWebhookRoute: ApiPublicMomoWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

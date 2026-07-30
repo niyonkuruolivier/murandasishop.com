@@ -1,20 +1,24 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCart } from "@/lib/cart";
-import { useState } from "react";
-import { CheckCircle2, MessageCircle, Wallet } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { CheckCircle2, MessageCircle, Wallet, Smartphone, Loader2, XCircle } from "lucide-react";
 import { whatsappUrl, cartMessage } from "@/lib/whatsapp";
-import { createOrder } from "@/lib/orders";
-import { PaymentVerification } from "@/components/PaymentVerification";
+import { createCheckoutOrder } from "@/lib/orders.functions";
+import { initiateMomoPayment, getPaymentState, type PaymentState } from "@/lib/payments.functions";
 import { useAuth } from "@/lib/auth";
 import { useMyWallet, redeemWalletForOrder, cashbackForOrder } from "@/lib/wallet";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [
       { title: "Checkout — Murandasi Shop" },
-      { name: "description", content: "Complete your order in one simple step." },
+      { name: "description", content: "Pay securely with Mobile Money or your Murandasi Cashback Wallet." },
       { property: "og:title", content: "Checkout — Murandasi Shop" },
-      { property: "og:description", content: "One-page checkout." },
+      { property: "og:description", content: "One-page checkout with instant Mobile Money payment." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: CheckoutPage,
@@ -22,116 +26,171 @@ export const Route = createFileRoute("/checkout")({
 
 const frw = (n: number) => `FRW ${Math.round(Math.max(0, n)).toLocaleString()}`;
 
+type Stage = "form" | "waiting" | "success" | "failed";
+
 function CheckoutPage() {
   const { detailed, items, total, clear } = useCart();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const qc = useQueryClient();
   const { data: walletBalance = 0 } = useMyWallet();
 
-  const [done, setDone] = useState(false);
+  const createOrderFn = useServerFn(createCheckoutOrder);
+  const payFn = useServerFn(initiateMomoPayment);
+  const stateFn = useServerFn(getPaymentState);
+
+  const [stage, setStage] = useState<Stage>("form");
   const [payment, setPayment] = useState("mtn");
   const [useWallet, setUseWallet] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<
-    | null
-    | {
-        name: string;
-        phone: string;
-        address: string;
-        city: string;
-        country: string;
-        payFrom: string;
-        walletUse: number;
-        momoDue: number;
-      }
-  >(null);
+  const [result, setResult] = useState<PaymentState | null>(null);
+  const [payPhone, setPayPhone] = useState("");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const maxWallet = Math.min(walletBalance, total);
   const walletUse = user && useWallet ? maxWallet : 0;
   const momoDue = Math.max(0, total - walletUse);
   const expectedCashback = cashbackForOrder(items, momoDue);
 
-  const placeOrder = async (p: {
-    name: string;
-    phone: string;
-    address: string;
-    city: string;
-    country: string;
-    payFrom: string;
-    walletUse: number;
-    momoDue: number;
-  }) => {
-    const method = p.momoDue <= 0 ? "wallet" : p.walletUse > 0 ? `${payment}+wallet` : payment;
-    const res = await createOrder({
-      customer_name: p.name,
-      phone: p.phone,
-      address: p.address,
-      city: p.city,
-      country: p.country,
-      payment_method: method,
-      items,
-      total,
-      notes: p.payFrom ? `Pay from: ${p.payFrom}` : undefined,
-    });
-    if (res.id && p.walletUse > 0) {
-      await redeemWalletForOrder(res.id, p.walletUse);
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  const finish = (state: PaymentState) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    setResult(state);
+    setStage(state.status === "success" ? "success" : "failed");
+    if (state.status === "success") {
+      clear();
+      qc.invalidateQueries({ queryKey: ["my-wallet"] });
+      qc.invalidateQueries({ queryKey: ["my-wallet-tx"] });
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
     }
-    clear();
-    return res.id;
   };
 
-  if (pending) {
-    const createOrderNow = async (): Promise<string | null> => placeOrder(pending);
+  const startPolling = (paymentId: string) => {
+    const started = Date.now();
+    pollRef.current = setInterval(async () => {
+      try {
+        const s = await stateFn({ data: { paymentId } });
+        if (s.status !== "pending") finish(s);
+        else if (Date.now() - started > 3 * 60 * 1000) {
+          finish({ ...s, status: "failed", message: "Payment timed out. No PIN was entered." });
+        }
+      } catch {
+        /* keep polling */
+      }
+    }, 4000);
+  };
 
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    const fd = new FormData(e.currentTarget);
+    const phoneToCharge = String(fd.get("pay_number") || "").trim();
+    if (momoDue > 0 && phoneToCharge.replace(/\D/g, "").length < 9) {
+      setError("Enter the Mobile Money number that will receive the payment prompt.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const method = momoDue <= 0 ? "wallet" : walletUse > 0 ? `${payment}+wallet` : payment;
+      const order = await createOrderFn({
+        data: {
+          customer_name: String(fd.get("name") || ""),
+          phone: String(fd.get("phone") || ""),
+          address: String(fd.get("address") || ""),
+          city: String(fd.get("city") || ""),
+          country: String(fd.get("country") || "Rwanda"),
+          payment_method: method,
+          userId: user?.id ?? null,
+          items: items.map((i) => ({ slug: i.slug, qty: i.qty })),
+        },
+      });
+
+      // Deduct the cashback wallet first so only the remainder is charged.
+      if (walletUse > 0) await redeemWalletForOrder(order.id, walletUse);
+
+      setPayPhone(phoneToCharge);
+      setStage("waiting");
+      const state = await payFn({ data: { orderId: order.id, phone: phoneToCharge || "0" } });
+
+      if (state.status === "pending" && state.paymentId) startPolling(state.paymentId);
+      else finish(state);
+    } catch (err) {
+      setStage("form");
+      setError(err instanceof Error ? err.message : "Could not start the payment. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (stage === "waiting") {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-10">
-        <div className="mb-6 text-center">
-          <h1 className="mt-3 text-2xl font-black">Complete your payment</h1>
-          <p className="text-sm text-muted-foreground">
-            Pay with MTN Mobile Money and upload your confirmation. Your order is only submitted
-            after you send the payment proof.
-          </p>
+      <main className="mx-auto max-w-lg px-4 py-20 text-center">
+        <Smartphone className="mx-auto h-16 w-16 text-accent" />
+        <h1 className="mt-6 text-2xl font-black">Check your phone</h1>
+        <p className="mt-2 text-muted-foreground">
+          We sent a Mobile Money payment request of <strong>{frw(momoDue)}</strong> to{" "}
+          <strong>{payPhone}</strong>. Enter your Mobile Money PIN to approve it.
+        </p>
+        <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Waiting for confirmation…
         </div>
-        {pending.walletUse > 0 && (
-          <div className="mb-4 rounded-xl border border-accent bg-accent/5 p-4 text-sm">
-            <strong>{frw(pending.walletUse)}</strong> is being paid from your Cashback Wallet. Pay
-            the remaining <strong>{frw(pending.momoDue)}</strong> with Mobile Money below.
-          </div>
-        )}
-        <PaymentVerification
-          amount={pending.momoDue}
-          defaultName={pending.name}
-          defaultPhone={pending.payFrom || pending.phone}
-          resolveOrderId={createOrderNow}
-          onDone={() => setTimeout(() => setDone(true), 800)}
-        />
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={() => setPending(null)}
-            className="text-xs font-semibold text-muted-foreground underline"
-          >
-            Back to checkout
-          </button>
-        </div>
+        <p className="mt-6 text-xs text-muted-foreground">
+          Keep this page open. Your order is confirmed automatically once the payment succeeds.
+        </p>
       </main>
     );
   }
 
-  if (done) {
+  if (stage === "failed") {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-20 text-center">
-        <CheckCircle2 className="mx-auto h-20 w-20 text-success" />
-        <h1 className="mt-6 text-3xl font-black">Order submitted!</h1>
+      <main className="mx-auto max-w-lg px-4 py-20 text-center">
+        <XCircle className="mx-auto h-16 w-16 text-destructive" />
+        <h1 className="mt-6 text-2xl font-black">Payment not completed</h1>
         <p className="mt-2 text-muted-foreground">
-          Thank you. We've received your order and will confirm it shortly.
+          {result?.message ??
+            (result?.status === "not_configured"
+              ? "Mobile Money is not configured yet."
+              : "The payment was not approved. Nothing was charged.")}
         </p>
+        <button
+          onClick={() => {
+            setResult(null);
+            setStage("form");
+          }}
+          className="mt-8 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-foreground hover:brightness-110"
+        >
+          Try again
+        </button>
+      </main>
+    );
+  }
+
+  if (stage === "success") {
+    return (
+      <main className="mx-auto max-w-lg px-4 py-20 text-center">
+        <CheckCircle2 className="mx-auto h-20 w-20 text-success" />
+        <h1 className="mt-6 text-3xl font-black">Payment successful</h1>
+        <p className="mt-2 text-muted-foreground">
+          Your order is now marked as <strong>Paid</strong> and is being prepared.
+        </p>
+        {(result?.cashback ?? 0) > 0 && (
+          <div className="mt-6 rounded-2xl border-2 border-accent bg-accent/5 p-5 text-left">
+            <div className="text-lg font-black">🎉 Congratulations!</div>
+            <p className="mt-1 text-sm">
+              You earned <strong>{frw(result!.cashback)}</strong> cashback from your purchase. It has
+              been added to your Murandasi Cashback Wallet and is now available for your next
+              purchase.
+            </p>
+          </div>
+        )}
         <Link
           to="/account"
           className="mt-8 inline-flex rounded-xl bg-accent px-6 py-3 font-semibold text-accent-foreground hover:brightness-110"
         >
-          View my orders
+          View my wallet & orders
         </Link>
       </main>
     );
@@ -147,37 +206,6 @@ function CheckoutPage() {
       </main>
     );
   }
-
-  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
-    const fd = new FormData(e.currentTarget);
-    const name = String(fd.get("name") || "");
-    const phone = String(fd.get("phone") || "");
-    const address = String(fd.get("address") || "");
-    const city = String(fd.get("city") || "");
-    const country = String(fd.get("country") || "Rwanda");
-    const payFrom = String(fd.get("pay_number") || "");
-    const p = { name, phone, address, city, country, payFrom, walletUse, momoDue };
-
-    // Fully paid with cashback — no Mobile Money step needed.
-    if (momoDue <= 0) {
-      setSubmitting(true);
-      try {
-        await placeOrder(p);
-        setDone(true);
-        setTimeout(() => navigate({ to: "/account" }), 4000);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not place order. Try again.");
-      } finally {
-        setSubmitting(false);
-      }
-      return;
-    }
-
-    // Defer order creation until payment proof is submitted.
-    setPending(p);
-  };
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -217,7 +245,9 @@ function CheckoutPage() {
                   </span>
                   <span className="mt-0.5 block text-sm text-muted-foreground">
                     Balance: <strong className="text-foreground">{frw(walletBalance)}</strong>
-                    {maxWallet > 0 ? ` — ${frw(maxWallet)} will be applied to this order.` : " — nothing to use yet."}
+                    {maxWallet > 0
+                      ? ` — ${frw(maxWallet)} will be applied, only ${frw(momoDue)} is charged on Mobile Money.`
+                      : " — nothing to use yet."}
                   </span>
                 </span>
               </label>
@@ -250,12 +280,16 @@ function CheckoutPage() {
                 </div>
                 <div className="mt-4">
                   <Field
-                    label={`${payment === "airtel" ? "Airtel Money" : "MTN MoMo"} number you'll pay from`}
+                    label={`${payment === "airtel" ? "Airtel Money" : "MTN MoMo"} number to charge`}
                     name="pay_number"
                     type="tel"
                     required
                     placeholder="07XXXXXXXX"
                   />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    You'll receive a payment prompt on this number for {frw(momoDue)}. Enter your PIN
+                    to approve.
+                  </p>
                 </div>
               </>
             ) : (
@@ -300,7 +334,7 @@ function CheckoutPage() {
 
             {expectedCashback > 0 && (
               <p className="mt-3 rounded-xl bg-accent/10 px-3 py-2 text-xs font-semibold text-accent">
-                💰 You'll earn {frw(expectedCashback)} cashback once this order is completed.
+                💰 You'll earn {frw(expectedCashback)} cashback instantly once your payment succeeds.
               </p>
             )}
             {!user && (
@@ -318,7 +352,7 @@ function CheckoutPage() {
               disabled={submitting}
               className="mt-6 w-full rounded-xl bg-accent py-4 text-base font-bold text-accent-foreground hover:brightness-110 disabled:opacity-60"
             >
-              {submitting ? "Placing…" : momoDue > 0 ? "Continue to Payment" : "Place Order"}
+              {submitting ? "Starting payment…" : momoDue > 0 ? `Pay Now ${frw(momoDue)}` : "Place Order"}
             </button>
             <a
               href={whatsappUrl(

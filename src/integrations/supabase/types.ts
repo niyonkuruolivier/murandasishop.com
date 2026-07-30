@@ -126,7 +126,9 @@ export type Database = {
           items: Json
           momo_amount: number | null
           notes: string | null
+          paid_at: string | null
           payment_method: string
+          payment_reference: string | null
           phone: string
           status: string
           total: number
@@ -146,7 +148,9 @@ export type Database = {
           items: Json
           momo_amount?: number | null
           notes?: string | null
+          paid_at?: string | null
           payment_method: string
+          payment_reference?: string | null
           phone: string
           status?: string
           total: number
@@ -166,7 +170,9 @@ export type Database = {
           items?: Json
           momo_amount?: number | null
           notes?: string | null
+          paid_at?: string | null
           payment_method?: string
+          payment_reference?: string | null
           phone?: string
           status?: string
           total?: number
@@ -176,99 +182,58 @@ export type Database = {
         }
         Relationships: []
       }
-      payment_verification_audit: {
+      payments: {
         Row: {
-          action: string
-          admin_email: string | null
-          admin_id: string | null
-          created_at: string
-          id: string
-          note: string | null
-          verification_id: string
-        }
-        Insert: {
-          action: string
-          admin_email?: string | null
-          admin_id?: string | null
-          created_at?: string
-          id?: string
-          note?: string | null
-          verification_id: string
-        }
-        Update: {
-          action?: string
-          admin_email?: string | null
-          admin_id?: string | null
-          created_at?: string
-          id?: string
-          note?: string | null
-          verification_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_verification_audit_verification_id_fkey"
-            columns: ["verification_id"]
-            isOneToOne: false
-            referencedRelation: "payment_verifications"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_verifications: {
-        Row: {
-          admin_notes: string | null
           amount: number
           created_at: string
-          customer_name: string
+          currency: string
+          external_ref: string | null
+          failure_reason: string | null
           id: string
-          note: string | null
           order_id: string | null
-          order_number: string | null
           phone: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          screenshot_url: string
+          provider: string
+          provider_ref: string | null
+          raw_response: Json
           status: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
-          admin_notes?: string | null
           amount: number
           created_at?: string
-          customer_name: string
+          currency?: string
+          external_ref?: string | null
+          failure_reason?: string | null
           id?: string
-          note?: string | null
           order_id?: string | null
-          order_number?: string | null
           phone: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          screenshot_url: string
+          provider?: string
+          provider_ref?: string | null
+          raw_response?: Json
           status?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
-          admin_notes?: string | null
           amount?: number
           created_at?: string
-          customer_name?: string
+          currency?: string
+          external_ref?: string | null
+          failure_reason?: string | null
           id?: string
-          note?: string | null
           order_id?: string | null
-          order_number?: string | null
           phone?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          screenshot_url?: string
+          provider?: string
+          provider_ref?: string | null
+          raw_response?: Json
           status?: string
           updated_at?: string
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "payment_verifications_order_id_fkey"
+            foreignKeyName: "payments_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
@@ -530,6 +495,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      mark_order_paid: {
+        Args: { _order_id: string; _reference?: string }
+        Returns: number
       }
       my_wallet_balance: { Args: never; Returns: number }
       recount_and_unlock_rewards: {

@@ -1,35 +1,34 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Gift, Package, MessageCircle, Bell, Upload, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck } from "lucide-react";
+import { Wallet, Package, MessageCircle, Bell, Upload, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
   useMyProfile,
-  useMilestones,
-  useMyClaims,
   useMyWhatsapp,
   useMyOrders,
   useMyNotifications,
-  type Milestone,
 } from "@/lib/loyalty";
+import { useMyWallet } from "@/lib/wallet";
 import { uploadWhatsappProof } from "@/lib/upload";
-import { RewardsProgress } from "@/components/RewardsProgress";
+import { CashbackWallet } from "@/components/CashbackWallet";
 
 
 export const Route = createFileRoute("/account")({
   head: () => ({
     meta: [
       { title: "My Account — Murandasi Shop" },
-      { name: "description", content: "Track your purchases, rewards, and progress toward the next gift." },
+      { name: "description", content: "Track your orders and your Murandasi Cashback Wallet." },
       { property: "og:title", content: "My Account — Murandasi Shop" },
-      { property: "og:description", content: "Your loyalty dashboard on Murandasi Shop." },
+      { property: "og:description", content: "Your cashback dashboard on Murandasi Shop." },
     ],
   }),
   component: AccountPage,
 });
 
-type Tab = "overview" | "rewards" | "orders" | "tracking" | "whatsapp" | "notifications";
+type Tab = "overview" | "wallet" | "orders" | "tracking" | "whatsapp" | "notifications";
+
 
 function AccountPage() {
   const { user, loading } = useAuth();

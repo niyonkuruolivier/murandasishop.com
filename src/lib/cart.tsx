@@ -7,18 +7,23 @@ export type CartLine = {
   price: number;
   image: string;
   qty: number;
+  cashbackPercent?: number;
 };
 
 type CartContextValue = {
   items: CartLine[];
   count: number;
   total: number;
-  add: (product: Pick<Product, "slug" | "name" | "price" | "image">, qty?: number) => void;
+  add: (
+    product: Pick<Product, "slug" | "name" | "price" | "image"> & { cashbackPercent?: number },
+    qty?: number,
+  ) => void;
   remove: (slug: string) => void;
   setQty: (slug: string, qty: number) => void;
   clear: () => void;
   detailed: (CartLine & { product: { name: string; price: number; image: string } })[];
 };
+
 
 const CartContext = createContext<CartContextValue | null>(null);
 const KEY = "murandasi_cart_v2";
@@ -44,12 +49,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const found = prev.find((i) => i.slug === product.slug);
       if (found)
         return prev.map((i) =>
-          i.slug === product.slug ? { ...i, qty: i.qty + qty } : i,
+          i.slug === product.slug
+            ? { ...i, qty: i.qty + qty, cashbackPercent: product.cashbackPercent ?? i.cashbackPercent ?? 0 }
+            : i,
         );
       return [
         ...prev,
-        { slug: product.slug, name: product.name, price: product.price, image: product.image, qty },
+        {
+          slug: product.slug,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          qty,
+          cashbackPercent: product.cashbackPercent ?? 0,
+        },
       ];
+
     });
 
   const remove = (slug: string) => setItems((prev) => prev.filter((i) => i.slug !== slug));

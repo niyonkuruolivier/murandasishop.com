@@ -1,92 +1,55 @@
+## Goal
 
-# Customer Loyalty & Rewards System
+Delete the gift/milestone claim feature entirely and ship a real Murandasi Cashback Wallet wired to the live database: per-product cashback %, wallet balances, split payments (wallet + Mobile Money), credit on order completion, reversals, and full transaction history.
 
-A complete loyalty program tied to authenticated customer accounts, with admin-approved orders and WhatsApp purchases counting toward configurable reward milestones.
+## Database changes
 
-## 1. Authentication
+New/changed schema (one migration, with grants + RLS):
 
-- Enable email/password + Google sign-in via Lovable Cloud (auth already scaffolded at `/auth`).
-- Add a `profiles` table auto-populated on signup (name, email, phone).
-- Header shows "Sign In" or account menu (Dashboard, Sign out) driven by session.
-- Checkout: if signed in, the order is linked to `user_id`; guest checkout still allowed but won't earn loyalty points.
+- `products.cashback_percent` — numeric, default 0, set per product by admin.
+- `orders`: add `subtotal`, `wallet_applied`, `momo_amount`, `cashback_percent_snapshot`, `cashback_awarded`, `cashback_status` (`none | pending | credited | reversed`). Add `completed` to the allowed order statuses.
+- `wallets` — one row per customer: `user_id` (unique), `balance`, timestamps. Users can read only their own; admins read all.
+- `wallet_transactions` — `user_id`, `order_id`, `type` (`earned | used | reversed | adjustment`), `amount` (signed), `balance_after`, `note`, `created_at`. Users read own; admins read all. No client writes — all mutations go through security-definer functions.
 
-## 2. Database (new tables)
+Database functions (authoritative money logic, so balances can never drift):
 
-- `profiles(user_id PK→auth.users, full_name, email, phone)` — auto-created via trigger.
-- `orders` — add `user_id uuid null`, `approved_item_count int default 0`. Statuses: pending / approved / rejected. On approve, sum item quantities into `approved_item_count`.
-- `whatsapp_purchases(id, user_id, product_name, order_number, purchase_date, amount, screenshot_url, notes, quantity default 1, status pending|approved|rejected, rejection_reason, created_at)`.
-- `reward_milestones(id, level int unique, threshold int, name, description, image, estimated_value, badge_name, sort_order, active)` — admin-editable.
-- `reward_claims(id, user_id, milestone_id, status locked|available|pending|claimed|rejected, unlocked_at, claimed_at, rejection_reason)`.
-- `notifications(id, user_id, type, title, body, read, created_at)`.
-- New storage bucket `whatsapp-proofs` (private, per-user RLS).
-- Seed default milestones: 10/15/25/50/75/100 with Bronze→Elite badges.
+- `apply_wallet_to_order(order_id, amount)` — locks the wallet row, validates balance, debits, writes a `used` transaction.
+- `credit_order_cashback(order_id)` — runs when an order becomes `completed`; computes `momo_amount * cashback_percent / 100`, credits the wallet, writes `earned`, marks `cashback_status = credited`, inserts the 🎉 notification. Idempotent.
+- `reverse_order_cashback(order_id, reason)` — deducts the awarded amount, writes `reversed`, marks the order, notifies the customer. Idempotent.
+- Trigger on `orders`: status → `completed` credits cashback; status → `cancelled`/`refunded` reverses it (and never awards if it was never credited).
+- Trigger on new profile/user: auto-create the wallet row; `get_or_create_wallet` fallback.
 
-### Aggregation
+Cleanup: drop `reward_claims`, `reward_milestones`, the related triggers/functions, and remove the reward columns no longer used (`reward_cycle_start`, `gifts_claimed`).
 
-- SQL function `lifetime_approved(user_id)` returning total approved item count = sum of `orders.approved_item_count` (where user_id + status=approved) + count of approved WhatsApp purchases (× quantity).
-- View `customer_stats` exposing counts, spend, current level, next milestone, remaining.
+## Cashback rule (enforced server-side)
 
-### RLS
+Cashback is computed **only** on the Mobile Money portion of an order, using each line's product cashback percentage against the amount actually paid by MoMo. Wallet-paid amounts earn nothing, so cashback can never compound.
 
-- Customers read/write only their own rows.
-- Admins (`has_role('admin')`) manage all.
-- Milestones publicly readable to authenticated users.
+## Frontend work
 
-## 3. Customer Dashboard `/account`
+**Product page** — cashback badge under the price: "Earn 5% Cashback — you'll receive FRW 5,000 in your Murandasi Cashback Wallet after your order is approved and completed." Amount recalculates from price × percent. Product cards get a small "5% cashback" chip.
 
-Route under `_authenticated/`. Tabs / sections:
+**Checkout** — summary shows Order Total, Cashback Wallet Balance, and Cashback You'll Earn (recalculated live as wallet usage changes). Three payment options:
+1. Mobile Money (full amount)
+2. Cashback Wallet (only offered when the balance covers the total; order completes with 0 cashback earned)
+3. Wallet + Mobile Money (wallet applied first, MoMo step and the USSD code request only the remainder)
 
-- **Overview**: profile card, big progress bar (X/Y approved purchases), current badge, remaining count, total spent, total orders, level ladder.
-- **Purchase History**: website orders + WhatsApp purchases merged, filterable by status.
-- **Rewards**: cards for each milestone showing Locked / Available (with Claim button) / Pending / Claimed.
-- **Submit WhatsApp Purchase**: form with screenshot upload to `whatsapp-proofs` bucket.
-- **Notifications**: bell in header + list here.
+The payment-proof step and the MTN USSD string use the remaining MoMo amount, never the full total. Wallet is debited at order submission; a confirmation line shows "FRW 8,000 deducted — remaining balance FRW 7,000."
 
-Milestone unlock triggers an animated congratulations modal with confetti when a new available reward appears.
+**Account dashboard** — the "Rewards" tab becomes "Cashback Wallet": big balance card, pending (not-yet-credited) cashback, and the transaction history table (date, order number, earned / used / reversed, balance after, status). Realtime subscriptions extended to `wallets` and `wallet_transactions`; the milestone/claim UI is deleted.
 
-## 4. Admin Dashboard (extend `/admin`)
+**Admin dashboard** —
+- Product form gains a Cashback % field.
+- "Rewards" tab becomes "Cashback": customer list with wallet balances, per-customer transaction history, and manual actions to reverse cashback on an order or apply a corrective adjustment.
+- Orders tab gains the `Completed` status option (which is what triggers crediting) plus `Cancelled`/`Refunded` for reversal, with the cashback state shown per order.
+- WhatsApp purchase verification stays as-is.
 
-New tabs:
+**Notifications** — reuses the existing notifications table: cashback credited, cashback used at checkout, cashback reversed.
 
-- **Customers**: list with search, lifetime purchases, level, unclaimed rewards. Click to see full profile.
-- **Order Approvals**: pending orders → Approve / Reject (approve fills `approved_item_count`).
-- **WhatsApp Verifications**: pending submissions with screenshot preview → Approve / Reject (+ reason).
-- **Reward Claims**: pending claims → Approve (sets claimed_at) / Reject.
-- **Milestones**: full CRUD (threshold, name, description, image upload, estimated value, badge).
-- **Analytics**: totals (approved orders, rewards claimed, pending claims, WA requests, revenue), top customers, customers near next reward.
+## Files touched
 
-## 5. Automation
+`src/lib/products.ts`, `src/lib/orders.ts`, `src/lib/payment-verification.ts`, new `src/lib/wallet.ts`, `src/routes/product.$id.tsx`, `src/components/ProductCard.tsx`, `src/routes/checkout.tsx`, `src/components/PaymentVerification.tsx`, `src/routes/account.tsx`, `src/routes/admin.tsx`, `src/components/admin/LoyaltyTab.tsx` → replaced by a cashback admin tab; `src/components/RewardsProgress.tsx` deleted.
 
-- Trigger on `orders` when status → approved: set `approved_item_count = sum(items[].qty)`, insert notification, upsert `reward_claims` rows with status=available for any milestone the new lifetime count crosses.
-- Trigger on `whatsapp_purchases` approve: same flow.
-- Trigger on `reward_claims` status change: insert customer notification.
-- All customer views use Supabase Realtime (already used) or `queryClient.invalidateQueries` after mutations for near-live updates. Enable realtime on `orders` (already off for security) → instead enable on `reward_claims`, `whatsapp_purchases`, `notifications` scoped by RLS.
+## Verification
 
-## 6. UX / Design
-
-- Reuse existing color tokens (navy + orange accent). New components:
-  - `LoyaltyProgress` (animated gradient bar).
-  - `RewardCard` with lock/unlock states.
-  - `BadgeChip` for Bronze→Elite.
-  - `MilestoneCongratsModal` with confetti.
-- Fully responsive; mobile shows sections as stacked cards, desktop uses 2-col grid.
-- All AI/support chat and existing pages untouched.
-
-## Technical notes
-
-- Milestones evaluated by comparing `lifetime_approved` count to `reward_milestones.threshold`; claim rows lazily created on first read via server fn `ensureRewardClaims(user_id)`.
-- Screenshot uploads via existing `src/lib/upload.ts` pattern into `whatsapp-proofs` bucket with `{user_id}/{uuid}.{ext}` path; RLS: owner read+write, admin read all.
-- Notifications marked read on view; bell shows unread count.
-- Uses `createServerFn` with `requireSupabaseAuth` for all mutating flows to keep RLS + validation server-side.
-- No changes to existing WhatsApp direct-chat "Buy" buttons; a new "Submit WhatsApp purchase" flow lives inside the dashboard.
-
-## Delivery order
-
-1. Migration: profiles, milestones, whatsapp_purchases, reward_claims, notifications, orders columns, triggers, RLS, seed, storage bucket.
-2. Auth wiring: profile trigger, header account menu, checkout user_id association.
-3. Customer dashboard routes + components.
-4. Admin dashboard new tabs.
-5. Realtime subscriptions + notifications bell.
-6. Polish: animations, congrats modal, empty states.
-
-Please approve and I'll build it end-to-end.
+After building I'll drive the live app: place an order with a split payment, confirm the MoMo amount excludes the wallet portion, mark the order completed as admin, and confirm the credited amount, wallet balance, and transaction rows are correct in the database — then reverse it and confirm the balance returns.

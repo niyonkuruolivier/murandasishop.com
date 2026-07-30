@@ -14,13 +14,14 @@ import {
   Image as ImageIcon,
   ArrowUp,
   ArrowDown,
-  Gift,
+  Wallet,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/lib/auth";
 import { useCategories } from "@/lib/products";
 import { uploadProductImage, uploadProductImages } from "@/lib/upload";
-import { LoyaltyTab } from "@/components/admin/LoyaltyTab";
+import { CashbackTab } from "@/components/admin/CashbackTab";
+
 import { PaymentVerificationsTab } from "@/components/admin/PaymentVerificationsTab";
 import { ShieldCheck } from "lucide-react";
 import type { HeroSlide } from "@/components/Hero";
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "products" | "orders" | "payments" | "categories" | "hero" | "loyalty" | "analytics";
+type Tab = "products" | "orders" | "payments" | "categories" | "hero" | "cashback" | "analytics";
 
 function AdminPage() {
   const { user, loading } = useAuth();
@@ -96,7 +97,7 @@ function AdminPage() {
       {tab === "payments" && <PaymentVerificationsTab />}
       {tab === "categories" && <CategoriesTab />}
       {tab === "hero" && <HeroTab />}
-      {tab === "loyalty" && <LoyaltyTab />}
+      {tab === "cashback" && <CashbackTab />}
       {tab === "analytics" && <AnalyticsTab />}
 
       <p className="mt-8 text-center text-xs text-muted-foreground">
@@ -111,13 +112,12 @@ function useAdminBadges() {
     queryKey: ["admin-badges"],
     refetchInterval: 15_000,
     queryFn: async () => {
-      const [orders, payments, claims, wa] = await Promise.all([
+      const [orders, payments, wa] = await Promise.all([
         supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase
           .from("payment_verifications")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
-        supabase.from("reward_claims").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase
           .from("whatsapp_purchases")
           .select("id", { count: "exact", head: true })
@@ -126,7 +126,7 @@ function useAdminBadges() {
       return {
         orders: orders.count ?? 0,
         payments: payments.count ?? 0,
-        rewards: (claims.count ?? 0) + (wa.count ?? 0),
+        whatsapp: wa.count ?? 0,
       };
     },
   });
@@ -140,7 +140,7 @@ function AdminTabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
     { id: "payments" as const, label: "Payment Verification", icon: ShieldCheck, badge: badges?.payments ?? 0 },
     { id: "categories" as const, label: "Categories", icon: LayoutGrid, badge: 0 },
     { id: "hero" as const, label: "Hero", icon: ImageIcon, badge: 0 },
-    { id: "loyalty" as const, label: "Rewards", icon: Gift, badge: badges?.rewards ?? 0 },
+    { id: "cashback" as const, label: "Cashback", icon: Wallet, badge: 0 },
     { id: "analytics" as const, label: "Analytics", icon: BarChart3, badge: 0 },
   ];
   return (
@@ -184,6 +184,7 @@ type ProductRow = {
   warranty: string;
   delivery: string;
   specs: unknown;
+  cashback_percent: number;
 };
 
 function useAdminProducts() {
@@ -224,6 +225,7 @@ function ProductsTab() {
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Price</th>
                 <th className="px-4 py-3">Stock</th>
+                <th className="px-4 py-3">Cashback</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -245,6 +247,9 @@ function ProductsTab() {
                     <span className={p.stock > 0 ? "text-success" : "text-destructive"}>
                       {p.stock}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-accent">
+                    {Number(p.cashback_percent ?? 0)}%
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
@@ -302,6 +307,7 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
     images: (product?.images ?? []).join("\n"),
     warranty: product?.warranty ?? "1 Year Warranty",
     delivery: product?.delivery ?? "2-3 days",
+    cashback_percent: product?.cashback_percent ?? 0,
     specs: product?.specs ? JSON.stringify(product.specs, null, 2) : "{}",
   });
   const [saving, setSaving] = useState(false);
@@ -367,6 +373,7 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
         images: images.length ? images : [form.image.trim()],
         warranty: form.warranty,
         delivery: form.delivery,
+        cashback_percent: Number(form.cashback_percent) || 0,
         specs: specs as never,
       };
       if (product) {
@@ -412,7 +419,7 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
             </select>
           </label>
           <TextField
-            label="Price (USD)"
+            label="Price (FRW)"
             type="number"
             value={String(form.price)}
             onChange={(v) => setForm({ ...form, price: Number(v) })}
@@ -444,6 +451,12 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
             label="Delivery"
             value={form.delivery}
             onChange={(v) => setForm({ ...form, delivery: v })}
+          />
+          <TextField
+            label="Cashback %"
+            type="number"
+            value={String(form.cashback_percent)}
+            onChange={(v) => setForm({ ...form, cashback_percent: Number(v) })}
           />
           <div className="sm:col-span-2 space-y-2">
             <span className="text-sm font-medium">Main image</span>
@@ -627,6 +640,7 @@ function OrdersTab() {
                 <option value="approved">Approved</option>
                 <option value="shipped">Shipped</option>
                 <option value="delivered">Delivered</option>
+                <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
@@ -660,6 +674,8 @@ function OrdersTab() {
 
 function statusColor(s: string) {
   switch (s) {
+    case "completed":
+      return "border-success bg-success/10 text-success";
     case "delivered":
       return "border-success text-success";
     case "shipped":

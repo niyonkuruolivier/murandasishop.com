@@ -52,7 +52,7 @@ export function Header() {
             to={user ? "/account" : "/auth"}
             className="rounded-full p-3 hover:bg-secondary"
             aria-label={user ? "My account" : "Sign in"}
-            title={user ? "My account & rewards" : "Sign in"}
+            title={user ? "My account & cashback" : "Sign in"}
           >
             <User className="h-5 w-5" />
           </Link>

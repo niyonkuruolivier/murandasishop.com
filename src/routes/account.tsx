@@ -1,35 +1,34 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Gift, Package, MessageCircle, Bell, Upload, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck } from "lucide-react";
+import { Wallet, Package, MessageCircle, Bell, Upload, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
   useMyProfile,
-  useMilestones,
-  useMyClaims,
   useMyWhatsapp,
   useMyOrders,
   useMyNotifications,
-  type Milestone,
 } from "@/lib/loyalty";
+import { useMyWallet } from "@/lib/wallet";
 import { uploadWhatsappProof } from "@/lib/upload";
-import { RewardsProgress } from "@/components/RewardsProgress";
+import { CashbackWallet } from "@/components/CashbackWallet";
 
 
 export const Route = createFileRoute("/account")({
   head: () => ({
     meta: [
       { title: "My Account — Murandasi Shop" },
-      { name: "description", content: "Track your purchases, rewards, and progress toward the next gift." },
+      { name: "description", content: "Track your orders and your Murandasi Cashback Wallet." },
       { property: "og:title", content: "My Account — Murandasi Shop" },
-      { property: "og:description", content: "Your loyalty dashboard on Murandasi Shop." },
+      { property: "og:description", content: "Your cashback dashboard on Murandasi Shop." },
     ],
   }),
   component: AccountPage,
 });
 
-type Tab = "overview" | "rewards" | "orders" | "tracking" | "whatsapp" | "notifications";
+type Tab = "overview" | "wallet" | "orders" | "tracking" | "whatsapp" | "notifications";
+
 
 function AccountPage() {
   const { user, loading } = useAuth();
@@ -42,14 +41,15 @@ function AccountPage() {
     if (!loading && !user) navigate({ to: "/auth" });
   }, [loading, user, navigate]);
 
-  // Live sync: when admin approves a payment/order/claim, the customer's
-  // dashboard (progress, orders, claims, notifications) updates instantly.
+  // Live sync: when admin approves a payment/order or cashback moves, the
+  // customer's dashboard updates instantly.
   useEffect(() => {
     if (!user) return;
     const invalidate = () => {
       qc.invalidateQueries({ queryKey: ["my-profile", user.id] });
       qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
-      qc.invalidateQueries({ queryKey: ["my-claims", user.id] });
+      qc.invalidateQueries({ queryKey: ["my-wallet", user.id] });
+      qc.invalidateQueries({ queryKey: ["my-wallet-tx", user.id] });
       qc.invalidateQueries({ queryKey: ["my-wa", user.id] });
       qc.invalidateQueries({ queryKey: ["my-notifs", user.id] });
     };
@@ -57,7 +57,9 @@ function AccountPage() {
       .channel(`account-live-${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "reward_claims", filter: `user_id=eq.${user.id}` }, invalidate)
+      .on("postgres_changes", { event: "*", schema: "public", table: "wallets", filter: `user_id=eq.${user.id}` }, invalidate)
+      .on("postgres_changes", { event: "*", schema: "public", table: "wallet_transactions", filter: `user_id=eq.${user.id}` }, invalidate)
+
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_purchases", filter: `user_id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "payment_verifications", filter: `user_id=eq.${user.id}` }, invalidate)
@@ -82,7 +84,7 @@ function AccountPage() {
         {(
           [
             { id: "overview", label: "Overview", icon: Trophy },
-            { id: "rewards", label: "Rewards", icon: Gift },
+            { id: "wallet", label: "Cashback Wallet", icon: Wallet },
             { id: "orders", label: "My Orders", icon: Package },
             { id: "tracking", label: "Order Tracking", icon: Truck },
             { id: "whatsapp", label: "WhatsApp Proofs", icon: MessageCircle },
@@ -104,7 +106,7 @@ function AccountPage() {
       </div>
 
       {tab === "overview" && <Overview />}
-      {tab === "rewards" && <Rewards />}
+      {tab === "wallet" && <CashbackWallet />}
       {tab === "orders" && <MyOrders />}
       {tab === "tracking" && <OrderTracking />}
       {tab === "whatsapp" && <WhatsappTab />}
@@ -144,57 +146,47 @@ function Header() {
 
 function Overview() {
   const { data: profile } = useMyProfile();
-  const { data: milestones = [] } = useMilestones();
-  const { data: claims = [] } = useMyClaims();
+  const { data: orders = [] } = useMyOrders();
+  const { data: balance = 0 } = useMyWallet();
 
-  const purchases = profile?.approved_purchases ?? 0;
-  const next = useMemo(
-    () => milestones.find((m) => m.purchases_required > purchases),
-    [milestones, purchases],
-  );
-  const progress = next
-    ? Math.min(100, Math.round((purchases / next.purchases_required) * 100))
-    : 100;
+
+
 
   return (
     <div className="space-y-6">
-      <RewardsProgress />
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Approved purchases" value={purchases} />
-        <StatCard label="Total spent" value={`FRW ${Number(profile?.total_spent ?? 0).toLocaleString()}`} />
-        <StatCard label="Rewards unlocked" value={claims.length} />
+      <div className="rounded-2xl border-2 border-accent bg-accent/5 p-6">
+        <div className="flex items-center gap-2 text-sm font-semibold uppercase text-muted-foreground">
+          <Wallet className="h-4 w-4 text-accent" /> Cashback Wallet balance
+        </div>
+        <div className="mt-2 text-4xl font-black">
+          FRW {Math.round(balance).toLocaleString()}
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Spend it on your next order — cashback is added automatically once an order is completed.
+        </p>
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Approved purchases" value={profile?.approved_purchases ?? 0} />
+        <StatCard
+          label="Total spent"
+          value={`FRW ${Number(profile?.total_spent ?? 0).toLocaleString()}`}
+        />
+        <StatCard label="Orders placed" value={orders.length} />
+      </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-center gap-3">
           <Trophy className="h-6 w-6 text-accent" />
-          <h2 className="text-lg font-bold">Next reward</h2>
+          <h2 className="text-lg font-bold">How cashback works</h2>
         </div>
-        {next ? (
-          <>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {purchases} of {next.purchases_required} purchases — {next.purchases_required - purchases} to go to unlock{" "}
-              <strong className="text-foreground">
-                {next.emoji} {next.title}
-              </strong>
-            </p>
-            <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-secondary">
-              <div
-                className="h-full rounded-full bg-accent transition-all duration-700"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </>
-        ) : (
-          <p className="mt-2 text-sm text-muted-foreground">
-            You've unlocked every reward. New tiers coming soon! 🎉
-          </p>
-        )}
+        <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
+          <li>1. Shop products that show an “Earn X% Cashback” badge.</li>
+          <li>2. Pay with Mobile Money — cashback is earned on the Mobile Money amount only.</li>
+          <li>3. When your order is marked <strong className="text-foreground">completed</strong>, cashback lands in your wallet.</li>
+          <li>4. Use your wallet at checkout, fully or partly, on any future order.</li>
+        </ol>
       </div>
-
-      <MilestoneList milestones={milestones} purchases={purchases} />
     </div>
   );
 }
@@ -208,47 +200,6 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function MilestoneList({ milestones, purchases }: { milestones: Milestone[]; purchases: number }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h2 className="mb-4 text-lg font-bold">All milestones</h2>
-      <ul className="space-y-3">
-        {milestones.map((m) => {
-          const unlocked = purchases >= m.purchases_required;
-          return (
-            <li
-              key={m.id}
-              className={`flex items-center gap-3 rounded-xl border p-3 transition ${
-                unlocked ? "border-accent bg-accent/5" : "border-border"
-              }`}
-            >
-              <div className="text-3xl">{m.emoji}</div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold">{m.title}</div>
-                <div className="text-xs text-muted-foreground">{m.description}</div>
-              </div>
-              <div className="text-right text-xs font-semibold">
-                <div>{m.purchases_required} purchases</div>
-                <div className={unlocked ? "text-accent" : "text-muted-foreground"}>
-                  {unlocked ? "Unlocked" : `${m.purchases_required - purchases} to go`}
-                </div>
-              </div>
-            </li>
-          );
-        })}
-        {milestones.length === 0 && (
-          <li className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            No milestones yet. Check back soon!
-          </li>
-        )}
-      </ul>
-    </div>
-  );
-}
-
-function Rewards() {
-  return <RewardsProgress />;
-}
 
 function MyOrders() {
   const { data: orders = [], isLoading } = useMyOrders();
@@ -288,6 +239,29 @@ function MyOrders() {
               </li>
             ))}
           </ul>
+          <div className="flex flex-wrap gap-2 border-t border-border p-4 text-xs">
+            {Number(o.wallet_applied) > 0 && (
+              <span className="rounded-full border border-border px-3 py-1 font-semibold">
+                Cashback used: FRW {Number(o.wallet_applied).toLocaleString()}
+              </span>
+            )}
+            <span
+              className={`rounded-full border px-3 py-1 font-semibold ${
+                o.cashback_status === "credited"
+                  ? "border-success text-success"
+                  : o.cashback_status === "reversed"
+                    ? "border-destructive text-destructive"
+                    : "border-border text-muted-foreground"
+              }`}
+            >
+              {o.cashback_status === "credited"
+                ? `Cashback earned: FRW ${Number(o.cashback_awarded).toLocaleString()}`
+                : o.cashback_status === "reversed"
+                  ? "Cashback reversed"
+                  : "Cashback pending order completion"}
+            </span>
+          </div>
+
         </details>
       ))}
     </div>
@@ -296,6 +270,7 @@ function MyOrders() {
 
 function statusBadge(s: string) {
   switch (s) {
+    case "completed":
     case "delivered":
     case "approved":
       return "border-success text-success";
@@ -318,6 +293,7 @@ const TRACK_STEPS = [
 
 function stepIndexFor(status: string) {
   if (status === "approved") return 1;
+  if (status === "completed") return TRACK_STEPS.length - 1;
   const i = TRACK_STEPS.findIndex((s) => s.key === status);
   return i === -1 ? 0 : i;
 }
@@ -450,7 +426,7 @@ function WhatsappTab() {
       <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-6">
         <h2 className="text-lg font-bold">Submit a WhatsApp purchase</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ordered via WhatsApp? Upload your payment screenshot so it counts toward your rewards.
+          Ordered via WhatsApp? Upload your payment screenshot so we can confirm it.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block">

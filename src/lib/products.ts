@@ -24,6 +24,7 @@ export type Product = {
   warranty: string;
   delivery: string;
   specs: Record<string, string>;
+  cashbackPercent: number;
 };
 
 type ProductRow = {
@@ -41,6 +42,7 @@ type ProductRow = {
   warranty: string;
   delivery: string;
   specs: unknown;
+  cashback_percent?: number | null;
 };
 
 export function rowToProduct(row: ProductRow): Product {
@@ -59,8 +61,10 @@ export function rowToProduct(row: ProductRow): Product {
     warranty: row.warranty,
     delivery: row.delivery,
     specs: (row.specs as Record<string, string>) ?? {},
+    cashbackPercent: Number(row.cashback_percent ?? 0),
   };
 }
+
 
 async function fetchProducts(): Promise<Product[]> {
   const { data, error } = await supabase

@@ -10,35 +10,7 @@ export type Profile = {
   avatar_url: string | null;
   approved_purchases: number;
   total_spent: number;
-  reward_cycle_start: number;
-  gifts_claimed: number;
   created_at: string;
-};
-
-export type Milestone = {
-  id: string;
-  purchases_required: number;
-  title: string;
-  description: string;
-  emoji: string;
-  active: boolean;
-  sort_order: number;
-};
-
-export type RewardClaim = {
-  id: string;
-  user_id: string;
-  milestone_id: string | null;
-  status: "unlocked" | "claimed" | "redeemed" | "pending" | "approved" | "rejected" | "delivered";
-  claimed_at: string | null;
-  redeemed_at: string | null;
-  admin_notes: string | null;
-  created_at: string;
-  cycle_index: number | null;
-  rejection_reason: string | null;
-  delivery_date: string | null;
-  delivery_time: string | null;
-  approved_at: string | null;
 };
 
 export type WhatsappPurchase = {
@@ -71,6 +43,10 @@ export type MyOrder = {
   items: Array<{ name: string; qty: number; price: number }>;
   payment_method: string;
   created_at: string;
+  wallet_applied: number;
+  momo_amount: number | null;
+  cashback_awarded: number;
+  cashback_status: string;
 };
 
 export function useMyProfile() {
@@ -86,39 +62,6 @@ export function useMyProfile() {
         .maybeSingle();
       if (error) throw error;
       return data as Profile | null;
-    },
-  });
-}
-
-export function useMilestones(includeInactive = false) {
-  return useQuery({
-    queryKey: ["milestones", includeInactive],
-    queryFn: async () => {
-      let q = supabase
-        .from("reward_milestones")
-        .select("*")
-        .order("purchases_required", { ascending: true });
-      if (!includeInactive) q = q.eq("active", true);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as Milestone[];
-    },
-  });
-}
-
-export function useMyClaims() {
-  const { user } = useAuth();
-  return useQuery({
-    queryKey: ["my-claims", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reward_claims")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as RewardClaim[];
     },
   });
 }
@@ -148,7 +91,9 @@ export function useMyOrders() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id,status,total,items,payment_method,created_at")
+        .select(
+          "id,status,total,items,payment_method,created_at,wallet_applied,momo_amount,cashback_awarded,cashback_status",
+        )
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;

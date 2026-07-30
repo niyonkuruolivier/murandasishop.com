@@ -90,6 +90,21 @@ function ProductPage() {
 
           <div className="mt-6 text-5xl font-black">FRW {product.price.toLocaleString()}</div>
 
+          {product.cashbackPercent > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border-2 border-accent bg-accent/5 px-4 py-3">
+              <span className="text-lg">💰</span>
+              <span className="font-bold text-accent">
+                Earn {product.cashbackPercent}% Cashback
+              </span>
+              <span className="text-sm text-muted-foreground">
+                — up to FRW{" "}
+                {Math.round((product.price * product.cashbackPercent) / 100).toLocaleString()} back in
+                your Murandasi Cashback Wallet
+              </span>
+            </div>
+          )}
+
+
           <div className="mt-6 space-y-2 text-sm">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-accent" />

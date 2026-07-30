@@ -49,12 +49,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const found = prev.find((i) => i.slug === product.slug);
       if (found)
         return prev.map((i) =>
-          i.slug === product.slug ? { ...i, qty: i.qty + qty } : i,
+          i.slug === product.slug
+            ? { ...i, qty: i.qty + qty, cashbackPercent: product.cashbackPercent ?? i.cashbackPercent ?? 0 }
+            : i,
         );
       return [
         ...prev,
-        { slug: product.slug, name: product.name, price: product.price, image: product.image, qty },
+        {
+          slug: product.slug,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          qty,
+          cashbackPercent: product.cashbackPercent ?? 0,
+        },
       ];
+
     });
 
   const remove = (slug: string) => setItems((prev) => prev.filter((i) => i.slug !== slug));

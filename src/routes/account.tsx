@@ -106,6 +106,7 @@ function AccountPage() {
       {tab === "overview" && <Overview />}
       {tab === "rewards" && <Rewards />}
       {tab === "orders" && <MyOrders />}
+      {tab === "tracking" && <OrderTracking />}
       {tab === "whatsapp" && <WhatsappTab />}
       {tab === "notifications" && <NotificationsTab />}
     </main>

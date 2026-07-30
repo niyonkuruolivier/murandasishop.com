@@ -149,9 +149,8 @@ function Overview() {
   const { data: orders = [] } = useMyOrders();
   const { data: balance = 0 } = useMyWallet();
 
-  const pendingCashback = orders
-    .filter((o) => o.cashback_status !== "credited" && o.cashback_status !== "reversed")
-    .reduce((a) => a, 0);
+
+
 
   return (
     <div className="space-y-6">

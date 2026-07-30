@@ -71,7 +71,7 @@ function AuthPage() {
           {mode === "signin" ? "Sign in" : "Create account"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {mode === "signin" ? "Access your rewards & orders" : "Join to earn rewards on every purchase"}
+          {mode === "signin" ? "Access your cashback & orders" : "Join to earn cashback on every purchase"}
         </p>
 
         <button

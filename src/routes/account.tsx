@@ -247,6 +247,7 @@ function MyOrders() {
 
 function statusBadge(s: string) {
   switch (s) {
+    case "completed":
     case "delivered":
     case "approved":
       return "border-success text-success";
@@ -269,6 +270,7 @@ const TRACK_STEPS = [
 
 function stepIndexFor(status: string) {
   if (status === "approved") return 1;
+  if (status === "completed") return TRACK_STEPS.length - 1;
   const i = TRACK_STEPS.findIndex((s) => s.key === status);
   return i === -1 ? 0 : i;
 }
@@ -401,7 +403,7 @@ function WhatsappTab() {
       <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-6">
         <h2 className="text-lg font-bold">Submit a WhatsApp purchase</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ordered via WhatsApp? Upload your payment screenshot so it counts toward your rewards.
+          Ordered via WhatsApp? Upload your payment screenshot so we can confirm it.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block">

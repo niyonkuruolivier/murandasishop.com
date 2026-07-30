@@ -1,17 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Wallet, Package, MessageCircle, Bell, Upload, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck } from "lucide-react";
+import { Wallet, Package, Bell, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
   useMyProfile,
-  useMyWhatsapp,
   useMyOrders,
   useMyNotifications,
 } from "@/lib/loyalty";
 import { useMyWallet } from "@/lib/wallet";
-import { uploadWhatsappProof } from "@/lib/upload";
 import { CashbackWallet } from "@/components/CashbackWallet";
 
 
@@ -27,7 +25,7 @@ export const Route = createFileRoute("/account")({
   component: AccountPage,
 });
 
-type Tab = "overview" | "wallet" | "orders" | "tracking" | "whatsapp" | "notifications";
+type Tab = "overview" | "wallet" | "orders" | "tracking" | "notifications";
 
 
 function AccountPage() {
@@ -50,7 +48,6 @@ function AccountPage() {
       qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
       qc.invalidateQueries({ queryKey: ["my-wallet", user.id] });
       qc.invalidateQueries({ queryKey: ["my-wallet-tx", user.id] });
-      qc.invalidateQueries({ queryKey: ["my-wa", user.id] });
       qc.invalidateQueries({ queryKey: ["my-notifs", user.id] });
     };
     const channel = supabase
@@ -60,7 +57,6 @@ function AccountPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "wallets", filter: `user_id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "wallet_transactions", filter: `user_id=eq.${user.id}` }, invalidate)
 
-      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_purchases", filter: `user_id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `user_id=eq.${user.id}` }, invalidate)
       .subscribe();
@@ -87,7 +83,6 @@ function AccountPage() {
             { id: "wallet", label: "Cashback Wallet", icon: Wallet },
             { id: "orders", label: "My Orders", icon: Package },
             { id: "tracking", label: "Order Tracking", icon: Truck },
-            { id: "whatsapp", label: "WhatsApp Proofs", icon: MessageCircle },
             { id: "notifications", label: "Notifications", icon: Bell },
           ] as const
         ).map((t) => (
@@ -109,7 +104,6 @@ function AccountPage() {
       {tab === "wallet" && <CashbackWallet />}
       {tab === "orders" && <MyOrders />}
       {tab === "tracking" && <OrderTracking />}
-      {tab === "whatsapp" && <WhatsappTab />}
       {tab === "notifications" && <NotificationsTab />}
     </main>
   );
@@ -377,126 +371,6 @@ function OrderTracking() {
 }
 
 
-function WhatsappTab() {
-  const qc = useQueryClient();
-  const { data: subs = [] } = useMyWhatsapp();
-  const [amount, setAmount] = useState("");
-  const [notes, setNotes] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErr(null);
-    setOk(false);
-    if (!file) {
-      setErr("Please attach the WhatsApp order screenshot.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const path = await uploadWhatsappProof(file);
-      const { data: session } = await supabase.auth.getSession();
-      const uid = session.session?.user?.id;
-      if (!uid) throw new Error("Not signed in");
-      const { error } = await supabase.from("whatsapp_purchases").insert({
-        user_id: uid,
-        amount: Number(amount) || 0,
-        screenshot_url: path,
-        notes: notes || null,
-        status: "pending",
-      });
-      if (error) throw error;
-      setAmount("");
-      setNotes("");
-      setFile(null);
-      setOk(true);
-      qc.invalidateQueries({ queryKey: ["my-wa"] });
-    } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : "Upload failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="text-lg font-bold">Submit a WhatsApp purchase</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Ordered via WhatsApp? Upload your payment screenshot so we can confirm it.
-        </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="text-sm font-medium">Amount paid (FRW)</span>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 outline-none focus:border-accent"
-              placeholder="e.g. 45000"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium">Screenshot</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="mt-1.5 block w-full text-sm"
-            />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="text-sm font-medium">Notes (optional)</span>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="mt-1.5 min-h-[80px] w-full rounded-lg border border-border bg-background px-3 py-2 outline-none focus:border-accent"
-              placeholder="Product ordered, date, phone number used…"
-            />
-          </label>
-        </div>
-        {err && <p className="mt-3 text-sm text-destructive">{err}</p>}
-        {ok && <p className="mt-3 text-sm text-success">Submitted! We'll review shortly.</p>}
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 font-bold text-accent-foreground hover:brightness-110 disabled:opacity-60"
-        >
-          <Upload className="h-4 w-4" /> {busy ? "Submitting…" : "Submit for review"}
-        </button>
-      </form>
-
-      <div>
-        <h3 className="mb-3 text-sm font-bold uppercase text-muted-foreground">Your submissions</h3>
-        {subs.length === 0 ? (
-          <div className="rounded-2xl border border-border p-8 text-center text-muted-foreground">
-            No submissions yet.
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {subs.map((s) => (
-              <li key={s.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4">
-                <div>
-                  <div className="font-semibold">FRW {Number(s.amount).toLocaleString()}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(s.created_at).toLocaleString()}
-                  </div>
-                  {s.admin_notes && (
-                    <div className="mt-1 text-xs text-muted-foreground">Note: {s.admin_notes}</div>
-                  )}
-                </div>
-                <StatusPill status={s.status} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function StatusPill({ status }: { status: string }) {
   if (status === "approved")

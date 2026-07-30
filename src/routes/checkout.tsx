@@ -2,8 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCart } from "@/lib/cart";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, MessageCircle, Wallet, Smartphone, Loader2, XCircle } from "lucide-react";
-import { whatsappUrl, cartMessage } from "@/lib/whatsapp";
+import { CheckCircle2, Wallet, Smartphone, Loader2, XCircle } from "lucide-react";
 import { createCheckoutOrder } from "@/lib/orders.functions";
 import { initiateMomoPayment, getPaymentState, type PaymentState } from "@/lib/payments.functions";
 import { useAuth } from "@/lib/auth";
@@ -354,26 +353,6 @@ function CheckoutPage() {
             >
               {submitting ? "Starting payment…" : momoDue > 0 ? `Pay Now ${frw(momoDue)}` : "Place Order"}
             </button>
-            <a
-              href={whatsappUrl(
-                cartMessage(
-                  detailed.map((i) => ({
-                    name: i.product.name,
-                    qty: i.qty,
-                    price: i.product.price,
-                  })),
-                  total,
-                ),
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-4 text-base font-bold text-white hover:brightness-110"
-            >
-              <MessageCircle className="h-5 w-5" /> buy with Miranda AI
-            </a>
-            <p className="mt-2 text-center text-xs text-muted-foreground">
-              Chat directly with us to confirm your order
-            </p>
           </div>
         </aside>
       </form>

@@ -84,7 +84,7 @@ function AccountPage() {
         {(
           [
             { id: "overview", label: "Overview", icon: Trophy },
-            { id: "rewards", label: "Rewards", icon: Gift },
+            { id: "wallet", label: "Cashback Wallet", icon: Wallet },
             { id: "orders", label: "My Orders", icon: Package },
             { id: "tracking", label: "Order Tracking", icon: Truck },
             { id: "whatsapp", label: "WhatsApp Proofs", icon: MessageCircle },

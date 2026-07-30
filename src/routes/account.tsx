@@ -41,14 +41,15 @@ function AccountPage() {
     if (!loading && !user) navigate({ to: "/auth" });
   }, [loading, user, navigate]);
 
-  // Live sync: when admin approves a payment/order/claim, the customer's
-  // dashboard (progress, orders, claims, notifications) updates instantly.
+  // Live sync: when admin approves a payment/order or cashback moves, the
+  // customer's dashboard updates instantly.
   useEffect(() => {
     if (!user) return;
     const invalidate = () => {
       qc.invalidateQueries({ queryKey: ["my-profile", user.id] });
       qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
-      qc.invalidateQueries({ queryKey: ["my-claims", user.id] });
+      qc.invalidateQueries({ queryKey: ["my-wallet", user.id] });
+      qc.invalidateQueries({ queryKey: ["my-wallet-tx", user.id] });
       qc.invalidateQueries({ queryKey: ["my-wa", user.id] });
       qc.invalidateQueries({ queryKey: ["my-notifs", user.id] });
     };
@@ -56,7 +57,9 @@ function AccountPage() {
       .channel(`account-live-${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "reward_claims", filter: `user_id=eq.${user.id}` }, invalidate)
+      .on("postgres_changes", { event: "*", schema: "public", table: "wallets", filter: `user_id=eq.${user.id}` }, invalidate)
+      .on("postgres_changes", { event: "*", schema: "public", table: "wallet_transactions", filter: `user_id=eq.${user.id}` }, invalidate)
+
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_purchases", filter: `user_id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "payment_verifications", filter: `user_id=eq.${user.id}` }, invalidate)

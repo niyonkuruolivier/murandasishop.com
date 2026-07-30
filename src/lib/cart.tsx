@@ -7,18 +7,23 @@ export type CartLine = {
   price: number;
   image: string;
   qty: number;
+  cashbackPercent?: number;
 };
 
 type CartContextValue = {
   items: CartLine[];
   count: number;
   total: number;
-  add: (product: Pick<Product, "slug" | "name" | "price" | "image">, qty?: number) => void;
+  add: (
+    product: Pick<Product, "slug" | "name" | "price" | "image"> & { cashbackPercent?: number },
+    qty?: number,
+  ) => void;
   remove: (slug: string) => void;
   setQty: (slug: string, qty: number) => void;
   clear: () => void;
   detailed: (CartLine & { product: { name: string; price: number; image: string } })[];
 };
+
 
 const CartContext = createContext<CartContextValue | null>(null);
 const KEY = "murandasi_cart_v2";

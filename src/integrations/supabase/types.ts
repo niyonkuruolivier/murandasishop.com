@@ -116,12 +116,15 @@ export type Database = {
       orders: {
         Row: {
           address: string
+          cashback_awarded: number
+          cashback_status: string
           city: string
           country: string
           created_at: string
           customer_name: string
           id: string
           items: Json
+          momo_amount: number | null
           notes: string | null
           payment_method: string
           phone: string
@@ -129,15 +132,19 @@ export type Database = {
           total: number
           updated_at: string
           user_id: string | null
+          wallet_applied: number
         }
         Insert: {
           address: string
+          cashback_awarded?: number
+          cashback_status?: string
           city: string
           country?: string
           created_at?: string
           customer_name: string
           id?: string
           items: Json
+          momo_amount?: number | null
           notes?: string | null
           payment_method: string
           phone: string
@@ -145,15 +152,19 @@ export type Database = {
           total: number
           updated_at?: string
           user_id?: string | null
+          wallet_applied?: number
         }
         Update: {
           address?: string
+          cashback_awarded?: number
+          cashback_status?: string
           city?: string
           country?: string
           created_at?: string
           customer_name?: string
           id?: string
           items?: Json
+          momo_amount?: number | null
           notes?: string | null
           payment_method?: string
           phone?: string
@@ -161,6 +172,7 @@ export type Database = {
           total?: number
           updated_at?: string
           user_id?: string | null
+          wallet_applied?: number
         }
         Relationships: []
       }
@@ -266,6 +278,7 @@ export type Database = {
       }
       products: {
         Row: {
+          cashback_percent: number
           category_slug: string
           created_at: string
           delivery: string
@@ -284,6 +297,7 @@ export type Database = {
           warranty: string
         }
         Insert: {
+          cashback_percent?: number
           category_slug: string
           created_at?: string
           delivery?: string
@@ -302,6 +316,7 @@ export type Database = {
           warranty?: string
         }
         Update: {
+          cashback_percent?: number
           category_slug?: string
           created_at?: string
           delivery?: string
@@ -336,10 +351,8 @@ export type Database = {
           created_at: string
           email: string | null
           full_name: string | null
-          gifts_claimed: number
           id: string
           phone: string | null
-          reward_cycle_start: number
           total_spent: number
           updated_at: string
         }
@@ -349,10 +362,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
-          gifts_claimed?: number
           id: string
           phone?: string | null
-          reward_cycle_start?: number
           total_spent?: number
           updated_at?: string
         }
@@ -362,106 +373,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
-          gifts_claimed?: number
           id?: string
           phone?: string | null
-          reward_cycle_start?: number
           total_spent?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      reward_claims: {
-        Row: {
-          admin_notes: string | null
-          approved_at: string | null
-          claimed_at: string | null
-          created_at: string
-          cycle_index: number | null
-          delivery_date: string | null
-          delivery_time: string | null
-          id: string
-          milestone_id: string | null
-          redeemed_at: string | null
-          rejection_reason: string | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          admin_notes?: string | null
-          approved_at?: string | null
-          claimed_at?: string | null
-          created_at?: string
-          cycle_index?: number | null
-          delivery_date?: string | null
-          delivery_time?: string | null
-          id?: string
-          milestone_id?: string | null
-          redeemed_at?: string | null
-          rejection_reason?: string | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          admin_notes?: string | null
-          approved_at?: string | null
-          claimed_at?: string | null
-          created_at?: string
-          cycle_index?: number | null
-          delivery_date?: string | null
-          delivery_time?: string | null
-          id?: string
-          milestone_id?: string | null
-          redeemed_at?: string | null
-          rejection_reason?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reward_claims_milestone_id_fkey"
-            columns: ["milestone_id"]
-            isOneToOne: false
-            referencedRelation: "reward_milestones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      reward_milestones: {
-        Row: {
-          active: boolean
-          created_at: string
-          description: string
-          emoji: string
-          id: string
-          purchases_required: number
-          sort_order: number
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          description?: string
-          emoji?: string
-          id?: string
-          purchases_required: number
-          sort_order?: number
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          description?: string
-          emoji?: string
-          id?: string
-          purchases_required?: number
-          sort_order?: number
-          title?: string
           updated_at?: string
         }
         Relationships: []
@@ -483,6 +397,71 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          note: string | null
+          order_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          order_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          order_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -534,6 +513,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_wallet: {
+        Args: { _amount: number; _note?: string; _user_id: string }
+        Returns: number
+      }
+      admin_reverse_cashback: {
+        Args: { _order_id: string; _reason?: string }
+        Returns: number
+      }
+      compute_order_cashback: { Args: { _order_id: string }; Returns: number }
+      credit_order_cashback: { Args: { _order_id: string }; Returns: number }
+      ensure_wallet: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -541,9 +531,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      my_wallet_balance: { Args: never; Returns: number }
       recount_and_unlock_rewards: {
         Args: { _user_id: string }
         Returns: undefined
+      }
+      redeem_wallet_for_order: {
+        Args: { _amount: number; _order_id: string }
+        Returns: number
+      }
+      reverse_order_cashback: {
+        Args: { _order_id: string; _reason?: string }
+        Returns: number
       }
     }
     Enums: {

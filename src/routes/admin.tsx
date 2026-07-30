@@ -38,7 +38,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "products" | "orders" | "payments" | "categories" | "hero" | "loyalty" | "analytics";
+type Tab = "products" | "orders" | "payments" | "categories" | "hero" | "cashback" | "analytics";
 
 function AdminPage() {
   const { user, loading } = useAuth();
@@ -97,7 +97,7 @@ function AdminPage() {
       {tab === "payments" && <PaymentVerificationsTab />}
       {tab === "categories" && <CategoriesTab />}
       {tab === "hero" && <HeroTab />}
-      {tab === "loyalty" && <LoyaltyTab />}
+      {tab === "cashback" && <CashbackTab />}
       {tab === "analytics" && <AnalyticsTab />}
 
       <p className="mt-8 text-center text-xs text-muted-foreground">
@@ -112,13 +112,12 @@ function useAdminBadges() {
     queryKey: ["admin-badges"],
     refetchInterval: 15_000,
     queryFn: async () => {
-      const [orders, payments, claims, wa] = await Promise.all([
+      const [orders, payments, wa] = await Promise.all([
         supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase
           .from("payment_verifications")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
-        supabase.from("reward_claims").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase
           .from("whatsapp_purchases")
           .select("id", { count: "exact", head: true })
@@ -127,7 +126,7 @@ function useAdminBadges() {
       return {
         orders: orders.count ?? 0,
         payments: payments.count ?? 0,
-        rewards: (claims.count ?? 0) + (wa.count ?? 0),
+        whatsapp: wa.count ?? 0,
       };
     },
   });
@@ -141,7 +140,7 @@ function AdminTabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
     { id: "payments" as const, label: "Payment Verification", icon: ShieldCheck, badge: badges?.payments ?? 0 },
     { id: "categories" as const, label: "Categories", icon: LayoutGrid, badge: 0 },
     { id: "hero" as const, label: "Hero", icon: ImageIcon, badge: 0 },
-    { id: "loyalty" as const, label: "Rewards", icon: Gift, badge: badges?.rewards ?? 0 },
+    { id: "cashback" as const, label: "Cashback", icon: Wallet, badge: 0 },
     { id: "analytics" as const, label: "Analytics", icon: BarChart3, badge: 0 },
   ];
   return (

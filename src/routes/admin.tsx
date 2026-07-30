@@ -22,7 +22,7 @@ import { useCategories } from "@/lib/products";
 import { uploadProductImage, uploadProductImages } from "@/lib/upload";
 import { CashbackTab } from "@/components/admin/CashbackTab";
 
-import { PaymentVerificationsTab } from "@/components/admin/PaymentVerificationsTab";
+import { PaymentsTab } from "@/components/admin/PaymentsTab";
 import { ShieldCheck } from "lucide-react";
 import type { HeroSlide } from "@/components/Hero";
 
@@ -94,7 +94,7 @@ function AdminPage() {
 
       {tab === "products" && <ProductsTab />}
       {tab === "orders" && <OrdersTab />}
-      {tab === "payments" && <PaymentVerificationsTab />}
+      {tab === "payments" && <PaymentsTab />}
       {tab === "categories" && <CategoriesTab />}
       {tab === "hero" && <HeroTab />}
       {tab === "cashback" && <CashbackTab />}
@@ -115,7 +115,7 @@ function useAdminBadges() {
       const [orders, payments, wa] = await Promise.all([
         supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase
-          .from("payment_verifications")
+          .from("payments")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
         supabase
@@ -137,7 +137,7 @@ function AdminTabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   const items = [
     { id: "products" as const, label: "Products", icon: Package, badge: 0 },
     { id: "orders" as const, label: "Orders", icon: ShoppingBag, badge: badges?.orders ?? 0 },
-    { id: "payments" as const, label: "Payment Verification", icon: ShieldCheck, badge: badges?.payments ?? 0 },
+    { id: "payments" as const, label: "Payments", icon: ShieldCheck, badge: badges?.payments ?? 0 },
     { id: "categories" as const, label: "Categories", icon: LayoutGrid, badge: 0 },
     { id: "hero" as const, label: "Hero", icon: ImageIcon, badge: 0 },
     { id: "cashback" as const, label: "Cashback", icon: Wallet, badge: 0 },
@@ -634,7 +634,7 @@ function OrdersTab() {
                 className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusColor(o.status)}`}
               >
                 <option value="pending">Pending</option>
-                <option value="payment_verified">Payment Verified</option>
+                <option value="paid">Paid</option>
                 <option value="processing">Processing</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="approved">Approved</option>
@@ -674,6 +674,8 @@ function OrdersTab() {
 
 function statusColor(s: string) {
   switch (s) {
+    case "paid":
+      return "border-success bg-success/10 text-success";
     case "completed":
       return "border-success bg-success/10 text-success";
     case "delivered":

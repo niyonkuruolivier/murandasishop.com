@@ -16,7 +16,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useCart } from "@/lib/cart";
-import { createOrder } from "@/lib/orders";
+import { useServerFn } from "@tanstack/react-start";
+import { createCheckoutOrder } from "@/lib/orders.functions";
+import { initiateMomoPayment, getPaymentState } from "@/lib/payments.functions";
+import { useAuth } from "@/lib/auth";
 
 type ChatProduct = {
   id: string;
@@ -58,10 +61,8 @@ const WELCOME: Message = {
     "Hi! 👋 I'm your Murandasi shopping assistant. Ask me anything — I can show you products, take your order, and process payment right here. What are you looking for today?",
 };
 
-function makeOrderId() {
-  const n = Math.floor(100000 + Math.random() * 900000);
-  return `MRD-${n}`;
-}
+
+
 
 /* ---------------- Product Card (in chat) ---------------- */
 
@@ -243,37 +244,54 @@ function InlineCheckout({
   const [payPhone, setPayPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const total = product.price * qty;
+  const { user } = useAuth();
+  const createOrderFn = useServerFn(createCheckoutOrder);
+  const payFn = useServerFn(initiateMomoPayment);
+  const stateFn = useServerFn(getPaymentState);
 
   async function placeOrder() {
     setStep("processing");
     setError(null);
-    // Simulated MoMo prompt delay
-    await new Promise((r) => setTimeout(r, 1600));
     try {
-      await createOrder({
-        customer_name: name,
-        phone,
-        address,
-        city,
-        country: "Rwanda",
-        payment_method: `${payment} (${payPhone})`,
-        items: [
-          {
-            slug: product.slug,
-            name: product.name,
-            price: product.price,
-            image: product.image,
-            qty,
-          },
-        ],
-        total,
-        notes: "Placed via AI chat assistant",
+      const order = await createOrderFn({
+        data: {
+          customer_name: name,
+          phone,
+          address,
+          city,
+          country: "Rwanda",
+          payment_method: payment === "Airtel Money" ? "airtel" : "mtn",
+          userId: user?.id ?? null,
+          notes: "Placed via AI chat assistant",
+          items: [{ slug: product.slug, qty }],
+        },
       });
-      const orderId = makeOrderId();
+
+      let state = await payFn({ data: { orderId: order.id, phone: payPhone } });
+      const started = Date.now();
+      while (state.status === "pending" && state.paymentId && Date.now() - started < 3 * 60 * 1000) {
+        await new Promise((r) => setTimeout(r, 4000));
+        state = await stateFn({ data: { paymentId: state.paymentId } });
+      }
+
+      if (state.status !== "success") {
+        throw new Error(
+          state.message ??
+            (state.status === "not_configured"
+              ? "Mobile Money is not configured yet."
+              : "The payment was not approved."),
+        );
+      }
+
+      const orderId = order.id.slice(0, 8).toUpperCase();
       setStep("done");
       onDone({
         role: "assistant",
-        content: `🎉 Order confirmed! Your order **${orderId}** is being processed. Our team will call you on ${phone} shortly to arrange delivery.`,
+        content:
+          `✅ Payment received! Your order **${orderId}** is marked as paid and is being prepared.` +
+          (state.cashback > 0
+            ? `\n\n🎉 Congratulations! You earned FRW ${state.cashback.toLocaleString()} cashback. It has been added to your Murandasi Cashback Wallet and is now available for your next purchase.`
+            : ""),
         widgets: [
           {
             kind: "confirmed",
@@ -285,8 +303,7 @@ function InlineCheckout({
         ],
       });
     } catch (e) {
-      console.error(e);
-      setError("Payment could not be completed. Please try again.");
+      setError(e instanceof Error ? e.message : "Payment could not be completed. Please try again.");
       setStep("payment");
     }
   }

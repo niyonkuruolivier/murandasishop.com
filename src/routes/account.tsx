@@ -239,6 +239,29 @@ function MyOrders() {
               </li>
             ))}
           </ul>
+          <div className="flex flex-wrap gap-2 border-t border-border p-4 text-xs">
+            {Number(o.wallet_applied) > 0 && (
+              <span className="rounded-full border border-border px-3 py-1 font-semibold">
+                Cashback used: FRW {Number(o.wallet_applied).toLocaleString()}
+              </span>
+            )}
+            <span
+              className={`rounded-full border px-3 py-1 font-semibold ${
+                o.cashback_status === "credited"
+                  ? "border-success text-success"
+                  : o.cashback_status === "reversed"
+                    ? "border-destructive text-destructive"
+                    : "border-border text-muted-foreground"
+              }`}
+            >
+              {o.cashback_status === "credited"
+                ? `Cashback earned: FRW ${Number(o.cashback_awarded).toLocaleString()}`
+                : o.cashback_status === "reversed"
+                  ? "Cashback reversed"
+                  : "Cashback pending order completion"}
+            </span>
+          </div>
+
         </details>
       ))}
     </div>

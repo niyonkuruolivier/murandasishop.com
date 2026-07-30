@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Gift, Package, MessageCircle, Bell, Upload, LogOut, CheckCircle2, Clock, XCircle, Trophy } from "lucide-react";
+import { Gift, Package, MessageCircle, Bell, Upload, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {

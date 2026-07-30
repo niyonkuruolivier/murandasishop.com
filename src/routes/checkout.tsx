@@ -2,8 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCart } from "@/lib/cart";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, MessageCircle, Wallet, Smartphone, Loader2, XCircle } from "lucide-react";
-import { whatsappUrl, cartMessage } from "@/lib/whatsapp";
+import { CheckCircle2, Wallet, Smartphone, Loader2, XCircle } from "lucide-react";
 import { createCheckoutOrder } from "@/lib/orders.functions";
 import { initiateMomoPayment, getPaymentState, type PaymentState } from "@/lib/payments.functions";
 import { useAuth } from "@/lib/auth";
@@ -354,9 +353,6 @@ function CheckoutPage() {
             >
               {submitting ? "Starting payment…" : momoDue > 0 ? `Pay Now ${frw(momoDue)}` : "Place Order"}
             </button>
-            <p className="mt-2 text-center text-xs text-muted-foreground">
-              Chat directly with us to confirm your order
-            </p>
           </div>
         </aside>
       </form>

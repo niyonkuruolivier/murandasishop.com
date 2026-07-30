@@ -29,7 +29,7 @@ export const Route = createFileRoute("/account")({
   component: AccountPage,
 });
 
-type Tab = "overview" | "rewards" | "orders" | "whatsapp" | "notifications";
+type Tab = "overview" | "rewards" | "orders" | "tracking" | "whatsapp" | "notifications";
 
 function AccountPage() {
   const { user, loading } = useAuth();

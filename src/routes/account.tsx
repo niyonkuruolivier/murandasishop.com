@@ -172,7 +172,7 @@ function Overview() {
           label="Total spent"
           value={`FRW ${Number(profile?.total_spent ?? 0).toLocaleString()}`}
         />
-        <StatCard label="Orders placed" value={orders.length + pendingCashback} />
+        <StatCard label="Orders placed" value={orders.length} />
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">

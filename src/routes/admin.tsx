@@ -14,13 +14,14 @@ import {
   Image as ImageIcon,
   ArrowUp,
   ArrowDown,
-  Gift,
+  Wallet,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/lib/auth";
 import { useCategories } from "@/lib/products";
 import { uploadProductImage, uploadProductImages } from "@/lib/upload";
-import { LoyaltyTab } from "@/components/admin/LoyaltyTab";
+import { CashbackTab } from "@/components/admin/CashbackTab";
+
 import { PaymentVerificationsTab } from "@/components/admin/PaymentVerificationsTab";
 import { ShieldCheck } from "lucide-react";
 import type { HeroSlide } from "@/components/Hero";

@@ -106,7 +106,7 @@ function AccountPage() {
       </div>
 
       {tab === "overview" && <Overview />}
-      {tab === "rewards" && <Rewards />}
+      {tab === "wallet" && <CashbackWallet />}
       {tab === "orders" && <MyOrders />}
       {tab === "tracking" && <OrderTracking />}
       {tab === "whatsapp" && <WhatsappTab />}

@@ -184,6 +184,7 @@ type ProductRow = {
   warranty: string;
   delivery: string;
   specs: unknown;
+  cashback_percent: number;
 };
 
 function useAdminProducts() {
@@ -224,6 +225,7 @@ function ProductsTab() {
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Price</th>
                 <th className="px-4 py-3">Stock</th>
+                <th className="px-4 py-3">Cashback</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -245,6 +247,9 @@ function ProductsTab() {
                     <span className={p.stock > 0 ? "text-success" : "text-destructive"}>
                       {p.stock}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-accent">
+                    {Number(p.cashback_percent ?? 0)}%
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
@@ -302,6 +307,7 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
     images: (product?.images ?? []).join("\n"),
     warranty: product?.warranty ?? "1 Year Warranty",
     delivery: product?.delivery ?? "2-3 days",
+    cashback_percent: product?.cashback_percent ?? 0,
     specs: product?.specs ? JSON.stringify(product.specs, null, 2) : "{}",
   });
   const [saving, setSaving] = useState(false);
@@ -367,6 +373,7 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
         images: images.length ? images : [form.image.trim()],
         warranty: form.warranty,
         delivery: form.delivery,
+        cashback_percent: Number(form.cashback_percent) || 0,
         specs: specs as never,
       };
       if (product) {
@@ -412,7 +419,7 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
             </select>
           </label>
           <TextField
-            label="Price (USD)"
+            label="Price (FRW)"
             type="number"
             value={String(form.price)}
             onChange={(v) => setForm({ ...form, price: Number(v) })}
@@ -444,6 +451,12 @@ function ProductEditor({ product, onClose }: { product: ProductRow | null; onClo
             label="Delivery"
             value={form.delivery}
             onChange={(v) => setForm({ ...form, delivery: v })}
+          />
+          <TextField
+            label="Cashback %"
+            type="number"
+            value={String(form.cashback_percent)}
+            onChange={(v) => setForm({ ...form, cashback_percent: Number(v) })}
           />
           <div className="sm:col-span-2 space-y-2">
             <span className="text-sm font-medium">Main image</span>
@@ -627,6 +640,7 @@ function OrdersTab() {
                 <option value="approved">Approved</option>
                 <option value="shipped">Shipped</option>
                 <option value="delivered">Delivered</option>
+                <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
@@ -660,6 +674,8 @@ function OrdersTab() {
 
 function statusColor(s: string) {
   switch (s) {
+    case "completed":
+      return "border-success bg-success/10 text-success";
     case "delivered":
       return "border-success text-success";
     case "shipped":

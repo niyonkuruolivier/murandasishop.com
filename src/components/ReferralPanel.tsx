@@ -22,10 +22,14 @@ export function ReferralPanel() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const waiting = rows.filter((r) => r.status !== "rewarded").length;
+  const rewardAmount = stats?.reward_amount ?? 1000;
+
   const cards = [
-    { label: "Total referrals", value: stats?.total ?? 0, icon: Users, tone: "text-foreground" },
-    { label: "Successful referrals", value: stats?.successful ?? 0, icon: TrendingUp, tone: "text-success" },
-    { label: "Referral earnings", value: frw(stats?.earnings ?? 0), icon: Gift, tone: "text-accent" },
+    { label: "Registered referrals", value: stats?.total ?? rows.length, icon: Users, tone: "text-foreground" },
+    { label: "Waiting for first purchase", value: waiting, icon: Clock, tone: "text-accent" },
+    { label: "Completed referrals", value: stats?.successful ?? 0, icon: TrendingUp, tone: "text-success" },
+    { label: "Referral cashback earned", value: frw(stats?.earnings ?? 0), icon: Gift, tone: "text-success" },
     { label: "Wallet balance", value: frw(stats?.balance ?? 0), icon: Wallet, tone: "text-foreground" },
   ];
 

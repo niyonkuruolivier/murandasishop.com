@@ -62,7 +62,7 @@ export function ReferralPanel() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <div key={c.label} className="rounded-2xl border border-border bg-card p-4">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
@@ -81,32 +81,42 @@ export function ReferralPanel() {
           </div>
         ) : (
           <ul className="space-y-2">
-            {rows.map((r) => (
-              <li
-                key={r.id}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
-              >
-                <div>
-                  <div className="font-semibold">
-                    {r.status === "rewarded" ? "Successful referral" : "Joined — awaiting first purchase"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(r.created_at).toLocaleDateString()}
-                    {r.rewarded_at ? ` · rewarded ${new Date(r.rewarded_at).toLocaleDateString()}` : ""}
-                  </div>
-                </div>
-                <div
-                  className={`text-sm font-black ${
-                    r.status === "rewarded" ? "text-success" : "text-muted-foreground"
-                  }`}
+            {rows.map((r) => {
+              const done = r.status === "rewarded";
+              return (
+                <li
+                  key={r.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
                 >
-                  {r.status === "rewarded" ? `+${frw(r.reward_amount)}` : "Pending"}
-                </div>
-              </li>
-            ))}
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold">{r.name || "Murandasi customer"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Registered {new Date(r.created_at).toLocaleDateString()}
+                      {r.rewarded_at ? ` · rewarded ${new Date(r.rewarded_at).toLocaleDateString()}` : ""}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${
+                        done ? "bg-success/10 text-success" : "bg-accent/10 text-accent"
+                      }`}
+                    >
+                      {done ? "🟢 Completed" : "🟡 Waiting for first purchase"}
+                    </span>
+                    <div className="text-right">
+                      <div className={`text-sm font-black ${done ? "text-success" : "text-muted-foreground"}`}>
+                        {done ? `+${frw(r.reward_amount)}` : frw(rewardAmount)}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">{done ? "Paid" : "Pending"}</div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
+
     </div>
   );
 }

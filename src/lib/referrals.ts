@@ -15,6 +15,7 @@ export type ReferralStats = {
 
 export type ReferralRow = {
   id: string;
+  name: string | null;
   status: string;
   reward_amount: number;
   rewarded_at: string | null;

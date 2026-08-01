@@ -26,7 +26,7 @@ export const Route = createFileRoute("/account")({
   component: AccountPage,
 });
 
-type Tab = "overview" | "wallet" | "orders" | "tracking" | "notifications";
+type Tab = "overview" | "wallet" | "referrals" | "orders" | "tracking" | "notifications";
 
 
 function AccountPage() {
@@ -50,6 +50,8 @@ function AccountPage() {
       qc.invalidateQueries({ queryKey: ["my-wallet", user.id] });
       qc.invalidateQueries({ queryKey: ["my-wallet-tx", user.id] });
       qc.invalidateQueries({ queryKey: ["my-notifs", user.id] });
+      qc.invalidateQueries({ queryKey: ["my-referral-stats", user.id] });
+      qc.invalidateQueries({ queryKey: ["my-referrals", user.id] });
     };
     const channel = supabase
       .channel(`account-live-${user.id}`)

@@ -582,6 +582,17 @@ export type Database = {
         Args: { _order_id: string; _reference?: string }
         Returns: number
       }
+      my_referral_list: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          reward_amount: number
+          rewarded_at: string
+          status: string
+        }[]
+      }
       my_referral_stats: { Args: never; Returns: Json }
       my_wallet_balance: { Args: never; Returns: number }
       process_referral_reward: { Args: { _order_id: string }; Returns: number }

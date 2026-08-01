@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { captureReferralCodeFromUrl, claimPendingReferral } from "@/lib/referrals";
 
 type AuthContextValue = {
   user: User | null;

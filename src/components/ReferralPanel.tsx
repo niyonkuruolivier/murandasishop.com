@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Copy, Check, Gift, Wallet, TrendingUp } from "lucide-react";
+import { Users, Copy, Check, Gift, Wallet, TrendingUp, Clock } from "lucide-react";
 import { useMyReferralStats, useMyReferrals, referralLink } from "@/lib/referrals";
 
 const frw = (n: number) => `FRW ${Math.round(Number(n) || 0).toLocaleString()}`;

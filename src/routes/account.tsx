@@ -106,6 +106,7 @@ function AccountPage() {
 
       {tab === "overview" && <Overview />}
       {tab === "wallet" && <CashbackWallet />}
+      {tab === "referrals" && <ReferralPanel />}
       {tab === "orders" && <MyOrders />}
       {tab === "tracking" && <OrderTracking />}
       {tab === "notifications" && <NotificationsTab />}

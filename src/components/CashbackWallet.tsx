@@ -59,7 +59,7 @@ export function CashbackWallet() {
         ) : (
           <ul className="space-y-2">
             {txs.map((t) => {
-              const m = META[t.type];
+              const m = META[t.type] ?? FALLBACK;
               return (
                 <li
                   key={t.id}

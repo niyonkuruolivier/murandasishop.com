@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { captureReferralCodeFromUrl, claimPendingReferral } from "@/lib/referrals";
 
 type AuthContextValue = {
   user: User | null;
@@ -15,12 +16,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    captureReferralCodeFromUrl();
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) void claimPendingReferral();
     });
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
       setLoading(false);
+      if (data.session?.user) void claimPendingReferral();
     });
     return () => sub.subscription.unsubscribe();
   }, []);

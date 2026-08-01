@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Wallet, Package, Bell, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck } from "lucide-react";
+import { Wallet, Package, Bell, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/lib/loyalty";
 import { useMyWallet } from "@/lib/wallet";
 import { CashbackWallet } from "@/components/CashbackWallet";
+import { ReferralPanel } from "@/components/ReferralPanel";
 
 
 export const Route = createFileRoute("/account")({
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/account")({
   component: AccountPage,
 });
 
-type Tab = "overview" | "wallet" | "orders" | "tracking" | "notifications";
+type Tab = "overview" | "wallet" | "referrals" | "orders" | "tracking" | "notifications";
 
 
 function AccountPage() {
@@ -49,6 +50,8 @@ function AccountPage() {
       qc.invalidateQueries({ queryKey: ["my-wallet", user.id] });
       qc.invalidateQueries({ queryKey: ["my-wallet-tx", user.id] });
       qc.invalidateQueries({ queryKey: ["my-notifs", user.id] });
+      qc.invalidateQueries({ queryKey: ["my-referral-stats", user.id] });
+      qc.invalidateQueries({ queryKey: ["my-referrals", user.id] });
     };
     const channel = supabase
       .channel(`account-live-${user.id}`)
@@ -81,6 +84,7 @@ function AccountPage() {
           [
             { id: "overview", label: "Overview", icon: Trophy },
             { id: "wallet", label: "Cashback Wallet", icon: Wallet },
+            { id: "referrals", label: "Referrals", icon: Users },
             { id: "orders", label: "My Orders", icon: Package },
             { id: "tracking", label: "Order Tracking", icon: Truck },
             { id: "notifications", label: "Notifications", icon: Bell },
@@ -102,6 +106,7 @@ function AccountPage() {
 
       {tab === "overview" && <Overview />}
       {tab === "wallet" && <CashbackWallet />}
+      {tab === "referrals" && <ReferralPanel />}
       {tab === "orders" && <MyOrders />}
       {tab === "tracking" && <OrderTracking />}
       {tab === "notifications" && <NotificationsTab />}

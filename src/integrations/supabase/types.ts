@@ -318,6 +318,8 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          referral_code: string
+          referred_by: string | null
           total_spent: number
           updated_at: string
         }
@@ -329,6 +331,8 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          referral_code: string
+          referred_by?: string | null
           total_spent?: number
           updated_at?: string
         }
@@ -340,10 +344,86 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string
+          referred_by?: string | null
           total_spent?: number
           updated_at?: string
         }
         Relationships: []
+      }
+      referral_settings: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: boolean
+          max_rewards_per_referrer: number | null
+          reward_amount: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: boolean
+          max_rewards_per_referrer?: number | null
+          reward_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: boolean
+          max_rewards_per_referrer?: number | null
+          reward_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          order_id: string | null
+          referred_id: string
+          referrer_id: string
+          reward_amount: number
+          rewarded_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          referred_id: string
+          referrer_id: string
+          reward_amount?: number
+          rewarded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          referred_id?: string
+          referrer_id?: string
+          reward_amount?: number
+          rewarded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -486,9 +566,11 @@ export type Database = {
         Args: { _order_id: string; _reason?: string }
         Returns: number
       }
+      attach_referral: { Args: { _code: string }; Returns: string }
       compute_order_cashback: { Args: { _order_id: string }; Returns: number }
       credit_order_cashback: { Args: { _order_id: string }; Returns: number }
       ensure_wallet: { Args: { _user_id: string }; Returns: string }
+      generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -500,7 +582,9 @@ export type Database = {
         Args: { _order_id: string; _reference?: string }
         Returns: number
       }
+      my_referral_stats: { Args: never; Returns: Json }
       my_wallet_balance: { Args: never; Returns: number }
+      process_referral_reward: { Args: { _order_id: string }; Returns: number }
       recount_and_unlock_rewards: {
         Args: { _user_id: string }
         Returns: undefined

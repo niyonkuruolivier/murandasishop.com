@@ -6,7 +6,7 @@ export type WalletTransaction = {
   id: string;
   user_id: string;
   order_id: string | null;
-  type: "earned" | "used" | "reversed" | "adjustment";
+  type: "earned" | "used" | "reversed" | "adjustment" | "referral";
   amount: number;
   balance_after: number;
   note: string | null;

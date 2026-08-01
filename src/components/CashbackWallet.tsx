@@ -1,16 +1,19 @@
-import { Wallet, ArrowDownCircle, ArrowUpCircle, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Wallet, ArrowDownCircle, ArrowUpCircle, RotateCcw, SlidersHorizontal, Users } from "lucide-react";
 import { useMyWallet, useMyWalletTransactions, type WalletTransaction } from "@/lib/wallet";
 
 const frw = (n: number) => `FRW ${Math.round(Math.abs(Number(n) || 0)).toLocaleString()}`;
 
+const FALLBACK = { label: "Wallet activity", icon: Wallet, tone: "text-foreground", sign: "" };
+
 const META: Record<
-  WalletTransaction["type"],
+  string,
   { label: string; icon: typeof Wallet; tone: string; sign: string }
 > = {
   earned: { label: "Cashback earned", icon: ArrowDownCircle, tone: "text-success", sign: "+" },
   used: { label: "Used at checkout", icon: ArrowUpCircle, tone: "text-foreground", sign: "−" },
   reversed: { label: "Cashback reversed", icon: RotateCcw, tone: "text-destructive", sign: "−" },
   adjustment: { label: "Adjustment", icon: SlidersHorizontal, tone: "text-accent", sign: "" },
+  referral: { label: "Referral reward", icon: Users, tone: "text-success", sign: "+" },
 };
 
 export function CashbackWallet() {
@@ -56,7 +59,7 @@ export function CashbackWallet() {
         ) : (
           <ul className="space-y-2">
             {txs.map((t) => {
-              const m = META[t.type];
+              const m = META[t.type] ?? FALLBACK;
               return (
                 <li
                   key={t.id}

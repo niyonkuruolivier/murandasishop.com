@@ -91,12 +91,7 @@ export function useMyReferrals() {
     queryKey: ["my-referrals", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("referrals")
-        .select("id, status, reward_amount, rewarded_at, created_at")
-        .eq("referrer_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const { data, error } = await supabase.rpc("my_referral_list");
       if (error) throw error;
       return (data ?? []) as ReferralRow[];
     },

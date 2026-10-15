@@ -1,40 +1,98 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Product } from "./products";
+import { useAuth } from "./auth";
+import { usePurchasedSlugs } from "./purchased-products";
+import { cartLineTotal, effectiveShippingPrice } from "./shipping";
+import { variationCartKey } from "./variations";
 
 export type CartLine = {
-  slug: string; // primary key in cart
+  lineId: string;
+  slug: string;
   name: string;
   price: number;
+  shippingPrice: number;
   image: string;
   qty: number;
   cashbackPercent?: number;
+  variationSelections?: Record<string, string>;
+  variationSummary?: string;
+};
+
+export type AddToCartOptions = {
+  qty?: number;
+  price?: number;
+  variationSelections?: Record<string, string>;
+  variationSummary?: string;
 };
 
 type CartContextValue = {
   items: CartLine[];
   count: number;
+  subtotal: number;
+  shippingTotal: number;
   total: number;
+  purchasedSlugs: Set<string>;
   add: (
-    product: Pick<Product, "slug" | "name" | "price" | "image"> & { cashbackPercent?: number },
-    qty?: number,
+    product: Pick<Product, "slug" | "name" | "price" | "shippingPrice" | "image"> & {
+      cashbackPercent?: number;
+    },
+    options?: AddToCartOptions,
   ) => void;
-  remove: (slug: string) => void;
-  setQty: (slug: string, qty: number) => void;
+  remove: (lineId: string) => void;
+  setQty: (lineId: string, qty: number) => void;
   clear: () => void;
+  lineTotal: (line: CartLine) => number;
   detailed: (CartLine & { product: { name: string; price: number; image: string } })[];
 };
 
-
 const CartContext = createContext<CartContextValue | null>(null);
-const KEY = "murandasi_cart_v2";
+const KEY = "murandasi_cart_v3";
+
+function normalizeStoredLine(raw: Partial<CartLine> & { slug: string }): CartLine {
+  const selections = raw.variationSelections;
+  const lineId =
+    raw.lineId ||
+    (selections ? variationCartKey(raw.slug, selections) : raw.slug);
+  return {
+    lineId,
+    slug: raw.slug,
+    name: raw.name ?? raw.slug,
+    price: Number(raw.price) || 0,
+    shippingPrice: Number(raw.shippingPrice) || 0,
+    image: raw.image ?? "",
+    qty: Math.max(1, Number(raw.qty) || 1),
+    cashbackPercent: raw.cashbackPercent,
+    variationSelections: selections,
+    variationSummary: raw.variationSummary,
+  };
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const { data: purchasedList = [] } = usePurchasedSlugs();
+  const purchasedSlugs = useMemo(
+    () => new Set(user ? purchasedList : []),
+    [user, purchasedList],
+  );
   const [items, setItems] = useState<CartLine[]>([]);
 
   useEffect(() => {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem(KEY) : null;
-      if (raw) setItems(JSON.parse(raw));
+      if (!raw) {
+        const legacy = localStorage.getItem("murandasi_cart_v2");
+        if (legacy) {
+          const parsed = JSON.parse(legacy) as Partial<CartLine>[];
+          if (Array.isArray(parsed)) {
+            setItems(parsed.map((i) => normalizeStoredLine(i as CartLine)));
+          }
+        }
+        return;
+      }
+      const parsed = JSON.parse(raw) as Partial<CartLine>[];
+      if (Array.isArray(parsed)) {
+        setItems(parsed.map((i) => normalizeStoredLine(i as CartLine)));
+      }
     } catch {}
   }, []);
 
@@ -44,35 +102,61 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [items]);
 
-  const add: CartContextValue["add"] = (product, qty = 1) =>
+  const add: CartContextValue["add"] = (product, options) => {
+    const qty = options?.qty ?? 1;
+    const selections = options?.variationSelections;
+    const lineId = selections
+      ? variationCartKey(product.slug, selections)
+      : product.slug;
+    const unitPrice = options?.price ?? product.price;
+    const variationSummary = options?.variationSummary;
+
     setItems((prev) => {
-      const found = prev.find((i) => i.slug === product.slug);
-      if (found)
+      const found = prev.find((i) => i.lineId === lineId);
+      if (found) {
         return prev.map((i) =>
-          i.slug === product.slug
-            ? { ...i, qty: i.qty + qty, cashbackPercent: product.cashbackPercent ?? i.cashbackPercent ?? 0 }
+          i.lineId === lineId
+            ? {
+                ...i,
+                qty: i.qty + qty,
+                price: unitPrice,
+                shippingPrice: product.shippingPrice ?? i.shippingPrice ?? 0,
+                cashbackPercent: product.cashbackPercent ?? i.cashbackPercent ?? 0,
+              }
             : i,
         );
+      }
+      const displayName = variationSummary
+        ? `${product.name} (${variationSummary})`
+        : product.name;
       return [
         ...prev,
         {
+          lineId,
           slug: product.slug,
-          name: product.name,
-          price: product.price,
+          name: displayName,
+          price: unitPrice,
+          shippingPrice: product.shippingPrice ?? 0,
           image: product.image,
           qty,
           cashbackPercent: product.cashbackPercent ?? 0,
+          variationSelections: selections,
+          variationSummary,
         },
       ];
-
     });
+  };
 
-  const remove = (slug: string) => setItems((prev) => prev.filter((i) => i.slug !== slug));
-  const setQty = (slug: string, qty: number) =>
+  const remove = (lineId: string) => setItems((prev) => prev.filter((i) => i.lineId !== lineId));
+  const setQty = (lineId: string, qty: number) =>
     setItems((prev) =>
-      qty <= 0 ? prev.filter((i) => i.slug !== slug) : prev.map((i) => (i.slug === slug ? { ...i, qty } : i)),
+      qty <= 0
+        ? prev.filter((i) => i.lineId !== lineId)
+        : prev.map((i) => (i.lineId === lineId ? { ...i, qty } : i)),
     );
   const clear = () => setItems([]);
+
+  const lineTotalFn = (line: CartLine) => cartLineTotal(line, purchasedSlugs);
 
   const detailed = items.map((i) => ({
     ...i,
@@ -80,10 +164,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }));
 
   const count = items.reduce((a, b) => a + b.qty, 0);
-  const total = items.reduce((a, b) => a + b.price * b.qty, 0);
+  const subtotal = items.reduce((a, b) => a + b.price * b.qty, 0);
+  const shippingTotal = items.reduce(
+    (a, b) => a + effectiveShippingPrice(b.shippingPrice, b.slug, purchasedSlugs) * b.qty,
+    0,
+  );
+  const total = items.reduce((a, b) => a + lineTotalFn(b), 0);
 
   return (
-    <CartContext.Provider value={{ items, count, total, add, remove, setQty, clear, detailed }}>
+    <CartContext.Provider
+      value={{
+        items,
+        count,
+        subtotal,
+        shippingTotal,
+        total,
+        purchasedSlugs,
+        add,
+        remove,
+        setQty,
+        clear,
+        lineTotal: lineTotalFn,
+        detailed,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

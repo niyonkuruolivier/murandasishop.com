@@ -3,15 +3,28 @@ import { Package, ShoppingCart, Zap } from "lucide-react";
 import { useState } from "react";
 import type { Product } from "@/lib/products";
 import { useCart } from "@/lib/cart";
+import { useAuth } from "@/lib/auth";
+import { usePurchasedSlugs } from "@/lib/purchased-products";
+import { productDisplayPrice, productPricePrefix } from "@/lib/shipping";
+import { usesVariationPricing } from "@/lib/variations";
 
 export function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
+  const { user } = useAuth();
+  const { data: purchasedList = [] } = usePurchasedSlugs();
   const navigate = useNavigate();
   const [bump, setBump] = useState(false);
+  const displayPrice = productDisplayPrice(product, user ? purchasedList : []);
+
+  const hasVariations = usesVariationPricing(product.variations);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (hasVariations) {
+      navigate({ to: "/product/$slug", params: { slug: product.slug } });
+      return;
+    }
     add(product);
     setBump(true);
     setTimeout(() => setBump(false), 350);
@@ -20,14 +33,18 @@ export function ProductCard({ product }: { product: Product }) {
   const handleBuy = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (hasVariations) {
+      navigate({ to: "/product/$slug", params: { slug: product.slug } });
+      return;
+    }
     add(product);
     navigate({ to: "/checkout" });
   };
 
   return (
     <Link
-      to="/product/$id"
-      params={{ id: product.slug }}
+      to="/product/$slug"
+      params={{ slug: product.slug }}
       className="group flex h-full flex-col rounded-2xl border border-border bg-card p-4 transition hover:shadow-lg hover:-translate-y-0.5"
     >
       <div className="w-full overflow-hidden rounded-xl aspect-square bg-secondary">
@@ -40,7 +57,9 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
       <div className="mt-4 flex flex-1 flex-col justify-between space-y-2">
         <h3 className="line-clamp-2 min-h-[3rem] text-base font-semibold">{product.name}</h3>
-        <div className="text-lg font-black text-foreground">FRW {product.price.toLocaleString()}</div>
+        <div className="text-lg font-black text-foreground">
+          {productPricePrefix(product)}FRW {displayPrice.toLocaleString()}
+        </div>
         {product.cashbackPercent > 0 && (
           <span className="inline-flex w-fit items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-[11px] font-bold text-accent">
             💰 Earn {product.cashbackPercent}% Cashback

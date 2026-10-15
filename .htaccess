@@ -1,0 +1,58 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/muraorcj/murandasishop.com"
+PassengerBaseURI "/"
+PassengerNodejs "/home/muraorcj/nodevenv/murandasishop.com/24/bin/node"
+PassengerAppType node
+PassengerStartupFile server/index.js
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+
+# Force HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Route all requests (except APIs and real files) to article-meta.php
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Exclude API routes from rewriting (Passenger handles them)
+  RewriteCond %{REQUEST_URI} ^/api/ [NC]
+  RewriteRule ^ - [L]
+  
+  # If requested file or directory exists, serve it directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  
+  # Otherwise, route to article-meta.php for dynamic meta injection
+  RewriteRule ^(.*)$ article-meta.php [L]
+</IfModule>
+
+# Prevent CloudLinux Passenger from trying to handle article-meta.php
+<Files "article-meta.php">
+  PassengerEnabled off
+</Files>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept"
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+
+    # Always fetch fresh app shell + service worker after deploy
+    <FilesMatch "^(index\.html|sw\.js|registerSW\.js|version\.json|manifest\.webmanifest|cache-reset\.html)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+
+    # Hashed build assets can be cached long-term
+    <FilesMatch "^assets/.*\.(js|css|webp|png|svg|woff2)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>

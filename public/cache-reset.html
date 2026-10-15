@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>Updating Murandasi Shop…</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        margin: 0;
+        background: #0c0c24;
+        color: #f0f0f8;
+      }
+      p { font-size: 1.1rem; }
+    </style>
+  </head>
+  <body>
+    <p>Loading the latest Murandasi Shop…</p>
+    <script>
+      (function () {
+        function done() {
+          window.location.replace("/");
+        }
+        var tasks = [];
+        try {
+          localStorage.removeItem("murandasi_app_version");
+          localStorage.setItem("murandasi_cache_gen", "1");
+        } catch (e) {}
+        if ("serviceWorker" in navigator) {
+          tasks.push(
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              return Promise.all(regs.map(function (r) { return r.unregister(); }));
+            }),
+          );
+        }
+        if ("caches" in window) {
+          tasks.push(
+            caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            }),
+          );
+        }
+        Promise.all(tasks).then(done).catch(done);
+      })();
+    </script>
+  </body>
+</html>

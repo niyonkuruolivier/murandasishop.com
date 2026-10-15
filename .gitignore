@@ -15,6 +15,12 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+.env
+.env.*
+!.env.example
+
+# Public dev tunnel URL (written by `npm run tunnel`)
+.tunnel-url
 
 # Wrangler / Cloudflare
 .wrangler/

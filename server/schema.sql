@@ -1,0 +1,273 @@
+CREATE DATABASE IF NOT EXISTS murandasishop_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE murandasishop_db;
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS wallet_transactions;
+DROP TABLE IF EXISTS wallets;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS referrals;
+DROP TABLE IF EXISTS referral_settings;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS whatsapp_purchases;
+DROP TABLE IF EXISTS saved_locations;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS hero_slides;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS user_permissions;
+DROP TABLE IF EXISTS user_roles;
+DROP TABLE IF EXISTS profiles;
+DROP TABLE IF EXISTS users;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+CREATE TABLE users (
+  id CHAR(36) PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  google_id VARCHAR(64) NULL UNIQUE,
+  password_hash VARCHAR(255) NULL,
+  blocked TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB;
+
+CREATE TABLE profiles (
+  id CHAR(36) PRIMARY KEY,
+  email VARCHAR(255) NULL,
+  full_name VARCHAR(255) NULL,
+  phone VARCHAR(64) NULL,
+  avatar_url TEXT NULL,
+  approved_purchases INT NOT NULL DEFAULT 0,
+  total_spent DECIMAL(14,2) NOT NULL DEFAULT 0,
+  referral_code VARCHAR(32) NOT NULL UNIQUE,
+  referred_by CHAR(36) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_profiles_user FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE user_roles (
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  role ENUM('admin','staff','user') NOT NULL DEFAULT 'user',
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uq_user_role (user_id, role),
+  CONSTRAINT fk_roles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE user_permissions (
+  user_id CHAR(36) NOT NULL,
+  permission VARCHAR(64) NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (user_id, permission),
+  INDEX idx_perm_user (user_id),
+  CONSTRAINT fk_perm_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE categories (
+  id CHAR(36) PRIMARY KEY,
+  slug VARCHAR(120) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
+  emoji VARCHAR(16) NOT NULL DEFAULT '📦',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB;
+
+CREATE TABLE products (
+  id CHAR(36) PRIMARY KEY,
+  slug VARCHAR(160) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
+  category_slug VARCHAR(120) NOT NULL,
+  price DECIMAL(14,2) NOT NULL DEFAULT 0,
+  shipping_price DECIMAL(14,2) NOT NULL DEFAULT 0,
+  stock INT NOT NULL DEFAULT 0,
+  in_stock TINYINT(1) NOT NULL DEFAULT 1,
+  rating DECIMAL(4,2) NOT NULL DEFAULT 4.50,
+  reviews INT NOT NULL DEFAULT 0,
+  image TEXT NOT NULL,
+  images JSON NULL,
+  warranty VARCHAR(255) NOT NULL DEFAULT '',
+  delivery VARCHAR(255) NOT NULL DEFAULT '',
+  specs JSON NULL,
+  variations JSON NULL,
+  cashback_percent DECIMAL(6,2) NOT NULL DEFAULT 0,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_products_category FOREIGN KEY (category_slug) REFERENCES categories(slug)
+) ENGINE=InnoDB;
+
+CREATE TABLE hero_slides (
+  id CHAR(36) PRIMARY KEY,
+  image TEXT NOT NULL,
+  title VARCHAR(255) NOT NULL DEFAULT '',
+  highlight VARCHAR(255) NOT NULL DEFAULT '',
+  cta_label VARCHAR(120) NOT NULL DEFAULT 'Shop Now',
+  cta_href VARCHAR(255) NOT NULL DEFAULT '/search',
+  sort_order INT NOT NULL DEFAULT 0,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB;
+
+CREATE TABLE orders (
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NULL,
+  customer_name VARCHAR(255) NOT NULL,
+  phone VARCHAR(64) NOT NULL,
+  address TEXT NOT NULL,
+  city VARCHAR(120) NOT NULL,
+  country VARCHAR(120) NOT NULL DEFAULT 'Rwanda',
+  delivery_latitude DECIMAL(10,7) NULL,
+  delivery_longitude DECIMAL(10,7) NULL,
+  delivery_location_label VARCHAR(255) NULL,
+  shipping_attachment_url VARCHAR(512) NULL,
+  payment_method VARCHAR(64) NOT NULL,
+  payment_reference VARCHAR(255) NULL,
+  items JSON NOT NULL,
+  total DECIMAL(14,2) NOT NULL DEFAULT 0,
+  wallet_applied DECIMAL(14,2) NOT NULL DEFAULT 0,
+  momo_amount DECIMAL(14,2) NULL,
+  cashback_awarded DECIMAL(14,2) NOT NULL DEFAULT 0,
+  cashback_status VARCHAR(32) NOT NULL DEFAULT 'none',
+  delivered_at DATETIME(3) NULL,
+  delivery_confirmed_at DATETIME(3) NULL,
+  cashback_deadline DATETIME(3) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  notes TEXT NULL,
+  paid_at DATETIME(3) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE saved_locations (
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  label VARCHAR(80) NOT NULL DEFAULT 'Delivery location',
+  address TEXT NOT NULL,
+  city VARCHAR(120) NOT NULL,
+  country VARCHAR(120) NOT NULL DEFAULT 'Rwanda',
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+  is_default TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_locations_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_locations_user (user_id, created_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE payments (
+  id CHAR(36) PRIMARY KEY,
+  order_id CHAR(36) NULL,
+  user_id CHAR(36) NULL,
+  provider VARCHAR(64) NOT NULL DEFAULT 'momo',
+  phone VARCHAR(64) NOT NULL,
+  amount DECIMAL(14,2) NOT NULL,
+  currency VARCHAR(8) NOT NULL DEFAULT 'RWF',
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  external_ref VARCHAR(255) NULL,
+  provider_ref VARCHAR(255) NULL,
+  failure_reason TEXT NULL,
+  raw_response JSON NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE wallets (
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL UNIQUE,
+  balance DECIMAL(14,2) NOT NULL DEFAULT 0,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_wallets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE wallet_transactions (
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  order_id CHAR(36) NULL,
+  type ENUM('earned','used','reversed','adjustment','referral') NOT NULL,
+  amount DECIMAL(14,2) NOT NULL,
+  balance_after DECIMAL(14,2) NOT NULL,
+  note TEXT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_wtx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_wtx_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
+  INDEX idx_wtx_user (user_id, created_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE notifications (
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  type VARCHAR(64) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL,
+  `read` TINYINT(1) NOT NULL DEFAULT 0,
+  link VARCHAR(255) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_notif_user (user_id, created_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE whatsapp_purchases (
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  screenshot_url TEXT NOT NULL,
+  notes TEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  admin_notes TEXT NULL,
+  reviewed_by CHAR(36) NULL,
+  reviewed_at DATETIME(3) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_wa_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE cashback_settings (
+  id TINYINT PRIMARY KEY DEFAULT 1,
+  confirmation_days INT NOT NULL DEFAULT 3,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB;
+
+CREATE TABLE shop_settings (
+  id TINYINT PRIMARY KEY DEFAULT 1,
+  whatsapp_phone VARCHAR(32) NOT NULL DEFAULT '250784254890',
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB;
+
+CREATE TABLE referral_settings (
+  id TINYINT PRIMARY KEY DEFAULT 1,
+  reward_amount DECIMAL(14,2) NOT NULL DEFAULT 1000,
+  max_rewards_per_referrer INT NULL,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB;
+
+CREATE TABLE referrals (
+  id CHAR(36) PRIMARY KEY,
+  code VARCHAR(32) NOT NULL,
+  referrer_id CHAR(36) NOT NULL,
+  referred_id CHAR(36) NOT NULL UNIQUE,
+  order_id CHAR(36) NULL,
+  reward_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  rewarded_at DATETIME(3) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_ref_referrer FOREIGN KEY (referrer_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_ref_referred FOREIGN KEY (referred_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+INSERT INTO shop_settings (id, whatsapp_phone) VALUES (1, '250784254890')
+  ON DUPLICATE KEY UPDATE whatsapp_phone = VALUES(whatsapp_phone);
+
+INSERT INTO referral_settings (id, reward_amount, active) VALUES (1, 1000, 1)
+  ON DUPLICATE KEY UPDATE reward_amount = VALUES(reward_amount);
+
+INSERT INTO cashback_settings (id, confirmation_days) VALUES (1, 3)
+  ON DUPLICATE KEY UPDATE confirmation_days = VALUES(confirmation_days);

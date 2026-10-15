@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet, apiPost } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export type WalletTransaction = {
@@ -15,7 +15,7 @@ export type WalletTransaction = {
 
 /** Cashback earned on a single line, before the Mobile Money split is applied. */
 export function lineCashback(price: number, qty: number, percent: number) {
-  return (Number(price) || 0) * (Number(qty) || 0) * (Number(percent) || 0) / 100;
+  return ((Number(price) || 0) * (Number(qty) || 0) * (Number(percent) || 0)) / 100;
 }
 
 /**
@@ -39,9 +39,8 @@ export function useMyWallet() {
     queryKey: ["my-wallet", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("my_wallet_balance");
-      if (error) throw error;
-      return Number(data ?? 0);
+      const data = await apiGet<{ balance: number }>("/wallet/balance");
+      return Number(data.balance ?? 0);
     },
   });
 }
@@ -51,24 +50,28 @@ export function useMyWalletTransactions() {
   return useQuery({
     queryKey: ["my-wallet-tx", user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wallet_transactions")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return (data ?? []) as WalletTransaction[];
-    },
+    queryFn: () => apiGet<WalletTransaction[]>("/wallet/transactions"),
   });
 }
 
 export async function redeemWalletForOrder(orderId: string, amount: number) {
-  const { data, error } = await supabase.rpc("redeem_wallet_for_order", {
-    _order_id: orderId,
-    _amount: amount,
+  const data = await apiPost<{ amount: number }>("/wallet/redeem", { orderId, amount });
+  return Number(data.amount ?? 0);
+}
+
+export type CashbackPolicy = {
+  confirmation_days: number;
+};
+
+export function formatConfirmationWindow(days: number): string {
+  const n = Math.max(1, Math.floor(Number(days) || 3));
+  return n === 1 ? "1 day" : `${n} days`;
+}
+
+export function useCashbackPolicy() {
+  return useQuery({
+    queryKey: ["cashback-policy"],
+    queryFn: () => apiGet<CashbackPolicy>("/wallet/cashback-policy"),
+    staleTime: 60_000,
   });
-  if (error) throw error;
-  return Number(data ?? 0);
 }

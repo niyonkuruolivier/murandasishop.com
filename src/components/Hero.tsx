@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet } from "@/lib/api";
 
 export type HeroSlide = {
   id: string;
@@ -30,15 +30,7 @@ const FALLBACK: HeroSlide[] = [
 export function useHeroSlides() {
   return useQuery({
     queryKey: ["hero-slides"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hero_slides")
-        .select("*")
-        .eq("active", true)
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as HeroSlide[];
-    },
+    queryFn: () => apiGet<HeroSlide[]>("/hero-slides", false),
   });
 }
 

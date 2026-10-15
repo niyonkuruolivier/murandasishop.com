@@ -1,12 +1,22 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCart } from "@/lib/cart";
 import { useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Wallet, Smartphone, Loader2, XCircle } from "lucide-react";
-import { createCheckoutOrder } from "@/lib/orders.functions";
-import { initiateMomoPayment, getPaymentState, type PaymentState } from "@/lib/payments.functions";
+import { CheckCircle2, Wallet, Smartphone, Loader2, XCircle, MapPin, Save } from "lucide-react";
+import {
+  createCheckoutOrder,
+  initiateMomoPayment,
+  getPaymentState,
+  type PaymentState,
+} from "@/lib/checkout-api";
 import { useAuth } from "@/lib/auth";
-import { useMyWallet, redeemWalletForOrder, cashbackForOrder } from "@/lib/wallet";
+import { useMyWallet, cashbackForOrder } from "@/lib/wallet";
+import {
+  createSavedLocation,
+  detectDeliveryLocation,
+  googleMapsLink,
+  useSavedLocations,
+  type SavedLocation,
+} from "@/lib/locations";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/checkout")({
@@ -24,19 +34,17 @@ export const Route = createFileRoute("/checkout")({
 });
 
 const frw = (n: number) => `FRW ${Math.round(Math.max(0, n)).toLocaleString()}`;
+type DeliveryDraft = Pick<SavedLocation, "label" | "address" | "city" | "country" | "latitude" | "longitude">;
 
 type Stage = "form" | "waiting" | "success" | "failed";
 
 function CheckoutPage() {
-  const { detailed, items, total, clear } = useCart();
+  const { items, lineTotal, total, clear } = useCart();
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: walletBalance = 0 } = useMyWallet();
-
-  const createOrderFn = useServerFn(createCheckoutOrder);
-  const payFn = useServerFn(initiateMomoPayment);
-  const stateFn = useServerFn(getPaymentState);
+  const { data: savedLocations = [] } = useSavedLocations();
 
   const [stage, setStage] = useState<Stage>("form");
   const [payment, setPayment] = useState("mtn");
@@ -45,12 +53,25 @@ function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PaymentState | null>(null);
   const [payPhone, setPayPhone] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState<DeliveryDraft | null>(null);
+  const [locationKey, setLocationKey] = useState("new");
+  const [saveLocation, setSaveLocation] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const maxWallet = Math.min(walletBalance, total);
   const walletUse = user && useWallet ? maxWallet : 0;
   const momoDue = Math.max(0, total - walletUse);
   const expectedCashback = cashbackForOrder(items, momoDue);
+
+  useEffect(() => {
+    if (!selectedLocation && savedLocations.length > 0) {
+      const preferred = savedLocations.find((location) => location.is_default) || savedLocations[0];
+      setSelectedLocation(preferred);
+      setLocationKey(preferred.id);
+    }
+  }, [savedLocations, selectedLocation]);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
@@ -63,6 +84,7 @@ function CheckoutPage() {
       qc.invalidateQueries({ queryKey: ["my-wallet"] });
       qc.invalidateQueries({ queryKey: ["my-wallet-tx"] });
       qc.invalidateQueries({ queryKey: ["my-orders"] });
+      qc.invalidateQueries({ queryKey: ["purchased-slugs"] });
     }
   };
 
@@ -70,7 +92,7 @@ function CheckoutPage() {
     const started = Date.now();
     pollRef.current = setInterval(async () => {
       try {
-        const s = await stateFn({ data: { paymentId } });
+        const s = await getPaymentState({ paymentId });
         if (s.status !== "pending") finish(s);
         else if (Date.now() - started > 3 * 60 * 1000) {
           finish({ ...s, status: "failed", message: "Payment timed out. No PIN was entered." });
@@ -94,25 +116,54 @@ function CheckoutPage() {
     setSubmitting(true);
     try {
       const method = momoDue <= 0 ? "wallet" : walletUse > 0 ? `${payment}+wallet` : payment;
-      const order = await createOrderFn({
-        data: {
-          customer_name: String(fd.get("name") || ""),
-          phone: String(fd.get("phone") || ""),
-          address: String(fd.get("address") || ""),
-          city: String(fd.get("city") || ""),
-          country: String(fd.get("country") || "Rwanda"),
-          payment_method: method,
-          userId: user?.id ?? null,
-          items: items.map((i) => ({ slug: i.slug, qty: i.qty })),
-        },
+      const address = String(fd.get("address") || "");
+      const city = String(fd.get("city") || "");
+      const country = String(fd.get("country") || "Rwanda");
+      const order = await createCheckoutOrder({
+        customer_name: String(fd.get("name") || ""),
+        phone: String(fd.get("phone") || ""),
+        address,
+        city,
+        country,
+        payment_method: method,
+        walletAmount: walletUse,
+        delivery_latitude: selectedLocation?.latitude ?? null,
+        delivery_longitude: selectedLocation?.longitude ?? null,
+        delivery_location_label: selectedLocation?.label ?? null,
+        items: items.map((i) => ({
+          slug: i.slug,
+          qty: i.qty,
+          ...(i.variationSelections ? { variations: i.variationSelections } : {}),
+        })),
       });
 
-      // Deduct the cashback wallet first so only the remainder is charged.
-      if (walletUse > 0) await redeemWalletForOrder(order.id, walletUse);
+      if (saveLocation && user) {
+        await createSavedLocation({
+          label: String(fd.get("location_label") || "Delivery location"),
+          address,
+          city,
+          country,
+          latitude: selectedLocation?.latitude ?? null,
+          longitude: selectedLocation?.longitude ?? null,
+          is_default: savedLocations.length === 0,
+        });
+        qc.invalidateQueries({ queryKey: ["saved-locations", user.id] });
+      }
 
       setPayPhone(phoneToCharge);
       setStage("waiting");
-      const state = await payFn({ data: { orderId: order.id, phone: phoneToCharge || "0" } });
+      if (order.momoAmount <= 0) {
+        finish({
+          paymentId: null,
+          orderId: order.id,
+          status: "success",
+          message: null,
+          cashback: 0,
+          amount: 0,
+        });
+        return;
+      }
+      const state = await initiateMomoPayment({ orderId: order.id, phone: phoneToCharge || "0" });
 
       if (state.status === "pending" && state.paymentId) startPolling(state.paymentId);
       else finish(state);
@@ -131,7 +182,12 @@ function CheckoutPage() {
         <h1 className="mt-6 text-2xl font-black">Check your phone</h1>
         <p className="mt-2 text-muted-foreground">
           We sent a Mobile Money payment request of <strong>{frw(momoDue)}</strong> to{" "}
-          <strong>{payPhone}</strong>. Enter your Mobile Money PIN to approve it.
+          <strong>{payPhone}</strong>. Enter your Mobile Money PIN to approve it
+          {import.meta.env.DEV ? " (sandbox may auto-approve in a few seconds for testing)" : ""}.
+        </p>
+        <p className="mt-3 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm font-semibold text-accent-foreground">
+          If you do not see the prompt, dial <strong>*182*7*1#</strong> on your phone and follow the
+          Mobile Money instructions to approve the payment.
         </p>
         <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Waiting for confirmation…
@@ -195,7 +251,7 @@ function CheckoutPage() {
     );
   }
 
-  if (detailed.length === 0) {
+  if (items.length === 0) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-16 text-center">
         <h1 className="text-2xl font-bold">Your cart is empty</h1>
@@ -213,12 +269,108 @@ function CheckoutPage() {
         <div className="space-y-8">
           <section className="rounded-2xl border border-border bg-card p-6">
             <h2 className="mb-4 text-lg font-bold">Shipping Address</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            {user && savedLocations.length > 0 && (
+              <label className="mb-4 block">
+                <span className="text-sm font-medium">Saved delivery location</span>
+                <select
+                  value={selectedLocation && "id" in selectedLocation ? selectedLocation.id : ""}
+                  onChange={(event) => {
+                    const next = savedLocations.find((location) => location.id === event.target.value);
+                    if (next) {
+                      setSelectedLocation(next);
+                      setLocationKey(next.id);
+                      setLocationMessage(null);
+                    }
+                  }}
+                  className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3"
+                >
+                  <option value="">Create a new location</option>
+                  {savedLocations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.label} — {location.address}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  setLocating(true);
+                  setLocationMessage(null);
+                  try {
+                    const location = await detectDeliveryLocation();
+                    setSelectedLocation(location);
+                    setLocationKey(`detected-${Date.now()}`);
+                    setLocationMessage("Your current location was detected and placed on the order.");
+                  } catch (error) {
+                    setLocationMessage(error instanceof Error ? error.message : "Could not detect your location.");
+                  } finally {
+                    setLocating(false);
+                  }
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-accent px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
+              >
+                <MapPin className="h-4 w-4" /> {locating ? "Detecting…" : "Use my current location"}
+              </button>
+              {googleMapsLink(selectedLocation?.latitude ?? null, selectedLocation?.longitude ?? null) && (
+                <a
+                  href={googleMapsLink(selectedLocation?.latitude ?? null, selectedLocation?.longitude ?? null) ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary"
+                >
+                  Open map
+                </a>
+              )}
+            </div>
+            {locationMessage && (
+              <p className="mb-4 rounded-xl bg-secondary p-3 text-sm text-muted-foreground">{locationMessage}</p>
+            )}
+            <div key={locationKey} className="grid gap-4 sm:grid-cols-2">
               <Field label="Full Name" name="name" required />
               <Field label="Phone" name="phone" type="tel" required />
-              <Field label="Address" name="address" required className="sm:col-span-2" placeholder="e.g. Kacyiru, KG 123 St" />
-              <Field label="City" name="city" required placeholder="e.g. Kigali" />
-              <Field label="Country" name="country" defaultValue="Rwanda" required />
+              {user && (
+                <Field
+                  label="Location name"
+                  name="location_label"
+                  defaultValue={selectedLocation?.label || ""}
+                  placeholder="e.g. Home or Office"
+                />
+              )}
+              <Field
+                label="Address"
+                name="address"
+                required
+                className="sm:col-span-2"
+                defaultValue={selectedLocation?.address || ""}
+                placeholder="e.g. Kacyiru, KG 123 St"
+              />
+              <Field
+                label="City"
+                name="city"
+                required
+                defaultValue={selectedLocation?.city || ""}
+                placeholder="e.g. Kigali"
+              />
+              <Field
+                label="Country"
+                name="country"
+                defaultValue={selectedLocation?.country || "Rwanda"}
+                required
+              />
+              {user && (
+                <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={saveLocation}
+                    onChange={(event) => setSaveLocation(event.target.checked)}
+                    className="h-4 w-4 accent-[oklch(0.7_0.2_45)]"
+                  />
+                  <Save className="h-4 w-4 text-accent" /> Save this delivery location for next time
+                </label>
+              )}
             </div>
           </section>
 
@@ -304,22 +456,19 @@ function CheckoutPage() {
             <h2 className="text-lg font-bold">Order</h2>
 
             <ul className="mt-4 space-y-3 text-sm">
-              {detailed.map((i) => (
+              {items.map((i) => (
                 <li key={i.slug} className="flex items-center gap-3">
-                  <img src={i.product.image} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                  <img src={i.image} alt="" className="h-12 w-12 rounded-lg object-cover" />
                   <div className="flex-1 min-w-0">
-                    <div className="line-clamp-1 font-medium">{i.product.name}</div>
+                    <div className="line-clamp-1 font-medium">{i.name}</div>
                     <div className="text-muted-foreground">Qty {i.qty}</div>
                   </div>
-                  <div className="font-semibold">
-                    FRW {(i.product.price * i.qty).toLocaleString()}
-                  </div>
+                  <div className="font-semibold">{frw(lineTotal(i))}</div>
                 </li>
               ))}
             </ul>
 
             <div className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
-              <Row label="Subtotal" value={frw(total)} />
               {walletUse > 0 && (
                 <Row label="Paid with cashback" value={`− ${frw(walletUse)}`} tone="text-accent" />
               )}

@@ -252,25 +252,20 @@ Avoid flashy effects.
 
 Murandasi Shop should be one of the simplest electronics e-commerce websites in the world. Customers should be able to open the website, find a product, understand it instantly, and complete a purchase with almost no learning curve.
 
-This project was built with [Lovable](https://lovable.dev).
+**Live site**: [https://murandasishop.com](https://murandasishop.com)
 
-**Live app**: https://murandasishop.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/a0d62bae-7360-4bc0-9299-2802edf12550).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+**Repository**: [github.com/niyonkuruolivier/murandasishop.com](https://github.com/niyonkuruolivier/murandasishop.com)
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Node.js 18+ and npm (or Bun) required.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+git clone https://github.com/niyonkuruolivier/murandasishop.com.git
+cd murandasishop.com
+npm install
+cp .env.example .env   # then fill in DB, JWT, payment keys
+npm run dev            # Vite + local API (see package.json)
 ```
+
+Production: build the frontend (`npm run build`), deploy `dist/`, run `server/index.js` (Passenger/Node), and apply DB migrations on start.

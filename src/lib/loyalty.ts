@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet, apiPatch, apiPost } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export type Profile = {
@@ -39,6 +39,8 @@ export type Notification = {
 export type MyOrder = {
   id: string;
   status: string;
+  payment_status: string;
+  delivery_status: string;
   total: number;
   items: Array<{ name: string; qty: number; price: number }>;
   payment_method: string;
@@ -47,6 +49,13 @@ export type MyOrder = {
   momo_amount: number | null;
   cashback_awarded: number;
   cashback_status: string;
+  delivery_latitude: number | null;
+  delivery_longitude: number | null;
+  delivery_location_label: string | null;
+  shipping_attachment_url: string | null;
+  delivered_at: string | null;
+  delivery_confirmed_at: string | null;
+  cashback_deadline: string | null;
 };
 
 export function useMyProfile() {
@@ -54,15 +63,7 @@ export function useMyProfile() {
   return useQuery({
     queryKey: ["my-profile", user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user!.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data as Profile | null;
-    },
+    queryFn: () => apiGet<Profile | null>("/profile/me"),
   });
 }
 
@@ -71,15 +72,7 @@ export function useMyWhatsapp() {
   return useQuery({
     queryKey: ["my-wa", user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("whatsapp_purchases")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as WhatsappPurchase[];
-    },
+    queryFn: () => apiGet<WhatsappPurchase[]>("/profile/whatsapp"),
   });
 }
 
@@ -88,18 +81,16 @@ export function useMyOrders() {
   return useQuery({
     queryKey: ["my-orders", user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select(
-          "id,status,total,items,payment_method,created_at,wallet_applied,momo_amount,cashback_awarded,cashback_status",
-        )
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as MyOrder[];
-    },
+    queryFn: () => apiGet<MyOrder[]>("/orders/me"),
+    staleTime: 30_000,
   });
+}
+
+export function confirmOrderDelivery(orderId: string) {
+  return apiPost<{ ok: boolean; status: string; cashback: number }>(
+    `/orders/${encodeURIComponent(orderId)}/confirm-delivery`,
+    {},
+  );
 }
 
 export function useMyNotifications() {
@@ -107,15 +98,11 @@ export function useMyNotifications() {
   return useQuery({
     queryKey: ["my-notifs", user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      return (data ?? []) as Notification[];
-    },
+    queryFn: () => apiGet<Notification[]>("/profile/notifications"),
   });
+}
+
+export async function markNotificationsRead(ids: string[]) {
+  if (ids.length === 0) return;
+  await apiPatch("/profile/notifications/read", { ids });
 }

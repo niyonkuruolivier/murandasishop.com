@@ -16,10 +16,11 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useCart } from "@/lib/cart";
-import { useServerFn } from "@tanstack/react-start";
-import { createCheckoutOrder } from "@/lib/orders.functions";
-import { initiateMomoPayment, getPaymentState } from "@/lib/payments.functions";
+import { createCheckoutOrder, initiateMomoPayment, getPaymentState } from "@/lib/checkout-api";
 import { useAuth } from "@/lib/auth";
+import { apiUrl } from "@/lib/api";
+import type { ProductSpecs } from "@/lib/specs";
+import { SpecValueDisplay } from "@/components/SpecValueDisplay";
 
 type ChatProduct = {
   id: string;
@@ -34,7 +35,7 @@ type ChatProduct = {
   images: string[];
   warranty: string;
   delivery: string;
-  specs: Record<string, string>;
+  specs: ProductSpecs;
 };
 
 type Widget =
@@ -161,7 +162,7 @@ function ChatProductCard({
             {specEntries.map(([k, v]) => (
               <li key={k} className="flex justify-between gap-2">
                 <span className="capitalize">{k}</span>
-                <span className="font-medium text-foreground">{v}</span>
+                <SpecValueDisplay value={v} />
               </li>
             ))}
           </ul>
@@ -245,33 +246,28 @@ function InlineCheckout({
   const [error, setError] = useState<string | null>(null);
   const total = product.price * qty;
   const { user } = useAuth();
-  const createOrderFn = useServerFn(createCheckoutOrder);
-  const payFn = useServerFn(initiateMomoPayment);
-  const stateFn = useServerFn(getPaymentState);
 
   async function placeOrder() {
     setStep("processing");
     setError(null);
     try {
-      const order = await createOrderFn({
-        data: {
-          customer_name: name,
-          phone,
-          address,
-          city,
-          country: "Rwanda",
-          payment_method: payment === "Airtel Money" ? "airtel" : "mtn",
-          userId: user?.id ?? null,
-          notes: "Placed via AI chat assistant",
-          items: [{ slug: product.slug, qty }],
-        },
+      const order = await createCheckoutOrder({
+        customer_name: name,
+        phone,
+        address,
+        city,
+        country: "Rwanda",
+        payment_method: payment === "Airtel Money" ? "airtel" : "mtn",
+        userId: user?.id ?? null,
+        notes: "Placed via AI chat assistant",
+        items: [{ slug: product.slug, qty }],
       });
 
-      let state = await payFn({ data: { orderId: order.id, phone: payPhone } });
+      let state = await initiateMomoPayment({ orderId: order.id, phone: payPhone });
       const started = Date.now();
       while (state.status === "pending" && state.paymentId && Date.now() - started < 3 * 60 * 1000) {
         await new Promise((r) => setTimeout(r, 4000));
-        state = await stateFn({ data: { paymentId: state.paymentId } });
+        state = await getPaymentState({ paymentId: state.paymentId });
       }
 
       if (state.status !== "success") {
@@ -533,7 +529,7 @@ export function SupportChat() {
     setInput("");
     setLoading(true);
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(apiUrl("/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: nextHistory }),

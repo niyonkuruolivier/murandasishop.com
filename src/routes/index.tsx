@@ -24,6 +24,20 @@ function Index() {
   return (
     <>
       <Hero />
+      {/* <section className="mx-auto max-w-7xl px-4 pt-8" aria-labelledby="about-murandasi">
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h2 id="about-murandasi" className="text-xl font-black">
+            Shop electronics online in Rwanda
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+            Murandasi Shop is an online marketplace for phones, laptops,
+            headphones, TVs, and other electronics. Browse products and prices,
+            place an order, select a delivery location, and pay securely using
+            Mobile Money. You can shop without an account; signing in adds
+            access to order history, cashback, and referral rewards.
+          </p>
+        </div>
+      </section> */}
       <main className="mx-auto max-w-7xl px-4 py-10" id="categories">
         <h1 className="sr-only">Murandasi Shop</h1>
         <div className="mb-6 flex items-end justify-between">

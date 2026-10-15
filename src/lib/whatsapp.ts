@@ -1,7 +1,14 @@
-export const WHATSAPP_NUMBER = "250788723098";
+export const DEFAULT_WHATSAPP_E164 = "250784254890";
+export const DEFAULT_WHATSAPP_DISPLAY = "+250 784 254 890";
 
-export function whatsappUrl(message: string) {
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+/** @deprecated use contact settings from API */
+export const WHATSAPP_NUMBER = DEFAULT_WHATSAPP_E164;
+/** @deprecated use contact settings from API */
+export const WHATSAPP_DISPLAY = DEFAULT_WHATSAPP_DISPLAY;
+
+export function whatsappUrl(message: string, e164 = DEFAULT_WHATSAPP_E164) {
+  const digits = String(e164).replace(/\D/g, "");
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
 export function productMessage(p: { name: string; price: number }) {

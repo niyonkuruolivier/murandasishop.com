@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Wallet, RotateCcw, Plus, Minus, X, Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import type { WalletTransaction } from "@/lib/wallet";
+import { Wallet, RotateCcw, Plus, Minus, X, Search, Settings } from "lucide-react";
+import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import type { WalletTransaction, CashbackPolicy } from "@/lib/wallet";
+import { formatConfirmationWindow } from "@/lib/wallet";
 
 const frw = (n: number) => `FRW ${Math.round(Math.abs(Number(n) || 0)).toLocaleString()}`;
 
@@ -31,13 +32,12 @@ function useWallets() {
   return useQuery({
     queryKey: ["admin-wallets"],
     queryFn: async () => {
-      const [{ data: wallets, error }, { data: profiles }] = await Promise.all([
-        supabase.from("wallets").select("*").order("balance", { ascending: false }),
-        supabase.from("profiles").select("id,full_name,email"),
+      const [wallets, profiles] = await Promise.all([
+        apiGet<WalletRow[]>("/wallet/admin"),
+        apiGet<ProfileLite[]>("/profile/list"),
       ]);
-      if (error) throw error;
-      const byId = new Map((profiles ?? []).map((p) => [p.id, p as ProfileLite]));
-      return ((wallets ?? []) as WalletRow[]).map((w) => ({
+      const byId = new Map(profiles.map((p) => [p.id, p]));
+      return wallets.map((w) => ({
         ...w,
         profile: byId.get(w.user_id) ?? null,
       }));
@@ -49,21 +49,14 @@ function useCashbackOrders() {
   return useQuery({
     queryKey: ["admin-cashback-orders"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select(
-          "id,customer_name,total,status,wallet_applied,momo_amount,cashback_awarded,cashback_status,created_at",
-        )
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return (data ?? []) as unknown as CashbackOrder[];
+      const orders = await apiGet<CashbackOrder[]>("/orders");
+      return orders.slice(0, 100);
     },
   });
 }
 
 export function CashbackTab() {
-  const [view, setView] = useState<"wallets" | "orders">("wallets");
+  const [view, setView] = useState<"wallets" | "orders" | "settings">("wallets");
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
@@ -71,6 +64,7 @@ export function CashbackTab() {
           [
             { id: "wallets", label: "Customer wallets" },
             { id: "orders", label: "Order cashback" },
+            { id: "settings", label: "Expiry settings" },
           ] as const
         ).map((v) => (
           <button
@@ -84,7 +78,7 @@ export function CashbackTab() {
           </button>
         ))}
       </div>
-      {view === "wallets" ? <WalletsView /> : <OrdersCashbackView />}
+      {view === "wallets" ? <WalletsView /> : view === "orders" ? <OrdersCashbackView /> : <CashbackSettingsView />}
     </div>
   );
 }
@@ -200,17 +194,18 @@ function AdjustDialog({
     }
     setBusy(true);
     setErr(null);
-    const { error } = await supabase.rpc("admin_adjust_wallet", {
-      _user_id: wallet.user_id,
-      _amount: value * dir,
-      _note: note || (dir > 0 ? "Manual credit by admin" : "Manual deduction by admin"),
-    });
-    setBusy(false);
-    if (error) {
-      setErr(error.message);
-      return;
+    try {
+      await apiPost("/wallet/admin/adjust", {
+        userId: wallet.user_id,
+        amount: value * dir,
+        note: note || (dir > 0 ? "Manual credit by admin" : "Manual deduction by admin"),
+      });
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Adjust failed");
+    } finally {
+      setBusy(false);
     }
-    onClose();
   };
 
   return (
@@ -273,16 +268,7 @@ function AdjustDialog({
 function HistoryDialog({ userId, onClose }: { userId: string; onClose: () => void }) {
   const { data: txs = [], isLoading } = useQuery({
     queryKey: ["admin-wallet-tx", userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wallet_transactions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return (data ?? []) as WalletTransaction[];
-    },
+    queryFn: () => apiGet<WalletTransaction[]>(`/wallet/admin/${userId}/transactions`),
   });
 
   return (
@@ -325,13 +311,14 @@ function OrdersCashbackView() {
   const reverse = async (id: string) => {
     const reason = prompt("Reason for reversing this cashback?") ?? undefined;
     setBusy(id);
-    const { error } = await supabase.rpc("admin_reverse_cashback", { _order_id: id, _reason: reason });
-    setBusy(null);
-    if (error) {
-      alert(error.message);
-      return;
+    try {
+      await apiPost("/wallet/admin/reverse-cashback", { orderId: id, reason });
+      refetch();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Reverse failed");
+    } finally {
+      setBusy(null);
     }
-    refetch();
     qc.invalidateQueries({ queryKey: ["admin-wallets"] });
   };
 
@@ -402,6 +389,98 @@ function OrdersCashbackView() {
           )}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function CashbackSettingsView() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-cashback-settings"],
+    queryFn: () => apiGet<CashbackPolicy>("/wallet/admin/settings"),
+  });
+  const [days, setDays] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const currentDays = data?.confirmation_days ?? 3;
+
+  const save = async () => {
+    const value = Math.floor(Number(days));
+    if (!value || value < 1 || value > 90) {
+      setErr("Enter a number between 1 and 90 days.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    setSaved(false);
+    try {
+      await apiPatch("/wallet/admin/settings", { confirmation_days: value });
+      await qc.invalidateQueries({ queryKey: ["admin-cashback-settings"] });
+      await qc.invalidateQueries({ queryKey: ["cashback-policy"] });
+      setSaved(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not save settings");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl border border-border p-8 text-center text-muted-foreground">Loading…</div>
+    );
+  }
+
+  return (
+    <div className="max-w-xl rounded-2xl border border-border bg-card p-6">
+      <div className="mb-4 flex items-center gap-2">
+        <Settings className="h-5 w-5 text-accent" />
+        <h3 className="text-lg font-black">Cashback expiry time</h3>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        After an order is marked <strong className="text-foreground">Delivered</strong>, the customer has this
+        many days to confirm delivery and receive cashback. If they do not confirm in time, the pending cashback
+        expires.
+      </p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Current setting: customers must confirm within{" "}
+        <strong className="text-foreground">{formatConfirmationWindow(currentDays)}</strong>.
+      </p>
+
+      <label className="mt-5 block">
+        <span className="text-sm font-medium">Confirmation window (days)</span>
+        <input
+          type="number"
+          min={1}
+          max={90}
+          placeholder={String(currentDays)}
+          value={days}
+          onChange={(e) => {
+            setDays(e.target.value);
+            setSaved(false);
+          }}
+          className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 text-base outline-none focus:border-accent"
+        />
+        <span className="mt-1 block text-xs text-muted-foreground">Allowed range: 1–90 days</span>
+      </label>
+
+      {err && <p className="mt-3 text-sm text-destructive">{err}</p>}
+      {saved && (
+        <p className="mt-3 text-sm font-semibold text-success">
+          Saved. New delivered orders will use this expiry time.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy || !days}
+        className="mt-5 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground hover:brightness-110 disabled:opacity-60"
+      >
+        {busy ? "Saving…" : "Save settings"}
+      </button>
     </div>
   );
 }

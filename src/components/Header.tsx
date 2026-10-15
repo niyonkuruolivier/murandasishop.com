@@ -2,15 +2,17 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Search, ShoppingCart, Home, LayoutDashboard, User } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
-import { useAuth, useIsAdmin } from "@/lib/auth";
-import logo from "@/assets/murandasi-logo.png.asset.json";
+import { useAuth } from "@/lib/auth";
+import { useAdminAccess } from "@/lib/admin-access";
+import logoUrl from "@/assets/murandasi-logo.webp";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Header() {
   const { count } = useCart();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const { user } = useAuth();
-  const { data: isAdmin } = useIsAdmin();
+  const { data: access } = useAdminAccess();
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +23,7 @@ export function Header() {
     <header className="fixed top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
         <Link to="/" className="flex shrink-0 items-center gap-2 text-xl font-black tracking-tight">
-          <img src={logo.url} alt="Murandasi Shop logo" className="h-9 w-9 object-contain" />
+          <img src={logoUrl} alt="Murandasi Shop logo" className="h-9 w-9 object-contain" />
           <span className="hidden sm:inline">Murandasi</span>
         </Link>
         <form onSubmit={submitSearch} className="relative flex-1 max-w-2xl">
@@ -35,13 +37,14 @@ export function Header() {
           />
         </form>
         <nav className="flex items-center gap-1">
-          <Link to="/" className="hidden rounded-full p-3 hover:bg-secondary sm:block" aria-label="Home">
+          <ThemeToggle />
+          <Link to="/" className="rounded-full p-2.5 hover:bg-secondary sm:p-3" aria-label="Home">
             <Home className="h-5 w-5" />
           </Link>
-          {isAdmin && (
+          {access?.isAdmin && (
             <Link
               to="/admin"
-              className="hidden rounded-full p-3 hover:bg-secondary sm:block"
+              className="rounded-full p-2.5 hover:bg-secondary sm:p-3"
               aria-label="Admin"
               title="Admin dashboard"
             >
@@ -50,7 +53,7 @@ export function Header() {
           )}
           <Link
             to={user ? "/account" : "/auth"}
-            className="rounded-full p-3 hover:bg-secondary"
+            className="rounded-full p-2.5 hover:bg-secondary sm:p-3"
             aria-label={user ? "My account" : "Sign in"}
             title={user ? "My account & cashback" : "Sign in"}
           >
@@ -58,7 +61,7 @@ export function Header() {
           </Link>
           <Link
             to="/cart"
-            className="relative rounded-full p-3 hover:bg-secondary"
+            className="relative rounded-full p-2.5 hover:bg-secondary sm:p-3"
             aria-label="Cart"
           >
             <ShoppingCart className="h-5 w-5" />

@@ -1,17 +1,29 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Wallet, Package, Bell, LogOut, CheckCircle2, Clock, XCircle, Trophy, Truck, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
   useMyProfile,
   useMyOrders,
   useMyNotifications,
+  markNotificationsRead,
+  confirmOrderDelivery,
 } from "@/lib/loyalty";
-import { useMyWallet } from "@/lib/wallet";
+import { useMyWallet, formatConfirmationWindow, useCashbackPolicy } from "@/lib/wallet";
 import { CashbackWallet } from "@/components/CashbackWallet";
 import { ReferralPanel } from "@/components/ReferralPanel";
+import { OrderPaymentDetails } from "@/components/OrderPaymentDetails";
+import { ShippingAttachmentView } from "@/components/ShippingAttachmentView";
+import {
+  canConfirmDelivery,
+  cashbackStatusMessage,
+  deliveryStatusBadgeClass,
+  deliveryStatusLabel,
+  orderIsFinalized,
+  paymentStatusBadgeClass,
+  paymentStatusLabel,
+} from "@/lib/orders";
 
 
 export const Route = createFileRoute("/account")({
@@ -35,41 +47,27 @@ function AccountPage() {
   const [tab, setTab] = useState<Tab>("overview");
 
   const qc = useQueryClient();
+  // Prefetch orders as soon as the account page loads (shared by Overview, My Orders, Tracking).
+  useMyOrders();
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
   }, [loading, user, navigate]);
 
-  // Live sync: when admin approves a payment/order or cashback moves, the
-  // customer's dashboard updates instantly.
+  // Refresh account data when returning to the tab, without clearing cached orders first.
   useEffect(() => {
     if (!user) return;
-    const invalidate = () => {
-      qc.invalidateQueries({ queryKey: ["my-profile", user.id] });
-      qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
-      qc.invalidateQueries({ queryKey: ["my-wallet", user.id] });
-      qc.invalidateQueries({ queryKey: ["my-wallet-tx", user.id] });
-      qc.invalidateQueries({ queryKey: ["my-notifs", user.id] });
-      qc.invalidateQueries({ queryKey: ["my-referral-stats", user.id] });
-      qc.invalidateQueries({ queryKey: ["my-referrals", user.id] });
+    const refresh = () => {
+      void qc.invalidateQueries({ queryKey: ["my-profile", user.id], refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: ["my-orders", user.id], refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: ["my-wallet", user.id], refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: ["my-wallet-tx", user.id], refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: ["my-notifs", user.id], refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: ["my-referral-stats", user.id], refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: ["my-referrals", user.id], refetchType: "active" });
     };
-    const channel = supabase
-      .channel(`account-live-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${user.id}` }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "wallets", filter: `user_id=eq.${user.id}` }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "wallet_transactions", filter: `user_id=eq.${user.id}` }, invalidate)
-
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `user_id=eq.${user.id}` }, invalidate)
-      .subscribe();
-    // Also refetch when tab regains focus (fallback if realtime isn't enabled).
-    const onFocus = () => invalidate();
-    window.addEventListener("focus", onFocus);
-    return () => {
-      supabase.removeChannel(channel);
-      window.removeEventListener("focus", onFocus);
-    };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
   }, [user, qc]);
 
   if (loading || !user) {
@@ -115,7 +113,7 @@ function AccountPage() {
 }
 
 function Header() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: profile } = useMyProfile();
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -133,7 +131,7 @@ function Header() {
           Continue shopping
         </Link>
         <button
-          onClick={() => supabase.auth.signOut()}
+          onClick={() => signOut()}
           className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary"
         >
           <LogOut className="h-4 w-4" /> Sign out
@@ -182,7 +180,7 @@ function Overview() {
         <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
           <li>1. Shop products that show an “Earn X% Cashback” badge.</li>
           <li>2. Pay with Mobile Money — cashback is earned on the Mobile Money amount only.</li>
-          <li>3. When your order is marked <strong className="text-foreground">completed</strong>, cashback lands in your wallet.</li>
+          <li>3. When your order is <strong className="text-foreground">delivered</strong>, confirm receipt to receive cashback in your wallet.</li>
           <li>4. Use your wallet at checkout, fully or partly, on any future order.</li>
         </ol>
       </div>
@@ -199,10 +197,137 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function OrdersSkeleton({ label }: { label: string }) {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label={label}>
+      <p className="text-center text-sm text-muted-foreground">{label}</p>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="animate-pulse rounded-2xl border border-border bg-card p-4">
+          <div className="h-4 w-40 rounded bg-secondary" />
+          <div className="mt-2 h-3 w-28 rounded bg-secondary" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+function OrderStatusBadges({ order }: { order: import("@/lib/loyalty").MyOrder }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <span
+        className={`rounded-full border px-3 py-1 text-xs font-semibold ${paymentStatusBadgeClass(order.payment_status)}`}
+      >
+        Payment: {paymentStatusLabel(order.payment_status)}
+      </span>
+      <span
+        className={`rounded-full border px-3 py-1 text-xs font-semibold ${deliveryStatusBadgeClass(order.delivery_status)}`}
+      >
+        Delivery: {deliveryStatusLabel(order.delivery_status)}
+      </span>
+    </div>
+  );
+}
+
+function DeliveryConfirmSection({
+  order,
+  confirmingId,
+  onConfirm,
+  embedded = false,
+}: {
+  order: import("@/lib/loyalty").MyOrder;
+  confirmingId: string | null;
+  onConfirm: (orderId: string) => void;
+  embedded?: boolean;
+}) {
+  const { data: policy } = useCashbackPolicy();
+  const confirmationWindow = formatConfirmationWindow(policy?.confirmation_days ?? 3);
+  const wrap = (children: ReactNode) =>
+    embedded ? <div className="mt-3">{children}</div> : <div className="border-t border-border p-4">{children}</div>;
+
+  if (orderIsFinalized(order)) {
+    return wrap(
+      <div className="text-sm text-muted-foreground">
+        <CheckCircle2 className="mb-1 inline h-4 w-4 text-success" />{" "}
+        Order complete — no further action needed.
+        {order.delivery_confirmed_at && (
+          <span className="block text-xs">
+            Confirmed {new Date(order.delivery_confirmed_at).toLocaleString()}
+          </span>
+        )}
+      </div>,
+    );
+  }
+
+  if (!canConfirmDelivery(order)) return null;
+
+  const hasCashback = order.cashback_status === "pending_delivery" && Number(order.cashback_awarded) > 0;
+
+  return wrap(
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="text-sm text-muted-foreground">
+        {hasCashback ? (
+          <>
+            Your order has been delivered. Confirm within {confirmationWindow} to receive{" "}
+            <strong className="text-foreground">
+              FRW {Number(order.cashback_awarded).toLocaleString()}
+            </strong>{" "}
+            cashback.
+          </>
+        ) : (
+          <>Your order has been delivered. Please confirm you received it.</>
+        )}
+        {order.cashback_deadline && hasCashback && (
+          <span className="block text-xs">
+            Deadline: {new Date(order.cashback_deadline).toLocaleString()}
+          </span>
+        )}
+        {order.delivered_at && (
+          <span className="block text-xs">Delivered {new Date(order.delivered_at).toLocaleString()}</span>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onConfirm(order.id)}
+        disabled={confirmingId === order.id}
+        className="rounded-xl bg-accent px-4 py-2 text-sm font-bold text-accent-foreground hover:brightness-110 disabled:opacity-60"
+      >
+        {confirmingId === order.id ? "Confirming…" : "Confirm delivery"}
+      </button>
+    </div>,
+  );
+}
+
 
 function MyOrders() {
-  const { data: orders = [], isLoading } = useMyOrders();
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading…</div>;
+  const { data: orders = [], isLoading, isFetching } = useMyOrders();
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  const confirm = async (orderId: string) => {
+    setConfirmingId(orderId);
+    setDeliveryMessage(null);
+    try {
+      const result = await confirmOrderDelivery(orderId);
+      setDeliveryMessage(
+        result.cashback > 0
+          ? `Delivery confirmed. FRW ${Math.round(result.cashback).toLocaleString()} cashback was added to your wallet.`
+          : "Delivery confirmed.",
+      );
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-wallet"] });
+      qc.invalidateQueries({ queryKey: ["my-wallet-tx"] });
+    } catch (error) {
+      setDeliveryMessage(error instanceof Error ? error.message : "Could not confirm delivery.");
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
+  if (isLoading && orders.length === 0) {
+    return <OrdersSkeleton label="Loading your orders…" />;
+  }
   if (orders.length === 0)
     return (
       <div className="rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground">
@@ -212,6 +337,14 @@ function MyOrders() {
 
   return (
     <div className="space-y-3">
+      {isFetching && orders.length > 0 && (
+        <p className="text-center text-xs text-muted-foreground">Refreshing orders…</p>
+      )}
+      {deliveryMessage && (
+        <div className="rounded-xl border border-accent bg-accent/10 p-3 text-sm font-semibold">
+          {deliveryMessage}
+        </div>
+      )}
       {orders.map((o) => (
         <details key={o.id} className="rounded-2xl border border-border bg-card">
           <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3 p-4">
@@ -221,11 +354,9 @@ function MyOrders() {
                 {new Date(o.created_at).toLocaleString()}
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col items-end gap-2">
               <span className="font-black">FRW {Number(o.total).toLocaleString()}</span>
-              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusBadge(o.status)}`}>
-                {o.status}
-              </span>
+              <OrderStatusBadges order={o} />
             </div>
           </summary>
           <ul className="divide-y divide-border border-t border-border">
@@ -238,69 +369,83 @@ function MyOrders() {
               </li>
             ))}
           </ul>
-          <div className="flex flex-wrap gap-2 border-t border-border p-4 text-xs">
-            {Number(o.wallet_applied) > 0 && (
-              <span className="rounded-full border border-border px-3 py-1 font-semibold">
-                Cashback used: FRW {Number(o.wallet_applied).toLocaleString()}
-              </span>
+          <div className="border-t border-border p-4">
+            <OrderPaymentDetails order={o} />
+            {o.shipping_attachment_url && (
+              <ShippingAttachmentView url={o.shipping_attachment_url} forCustomer />
             )}
+          </div>
+          <div className="flex flex-wrap gap-2 border-t border-border p-4 text-xs">
             <span
               className={`rounded-full border px-3 py-1 font-semibold ${
                 o.cashback_status === "credited"
                   ? "border-success text-success"
-                  : o.cashback_status === "reversed"
+                  : o.cashback_status === "reversed" || o.cashback_status === "cancelled"
                     ? "border-destructive text-destructive"
-                    : "border-border text-muted-foreground"
+                    : o.cashback_status === "pending_delivery"
+                      ? "border-accent text-accent"
+                      : "border-border text-muted-foreground"
               }`}
             >
-              {o.cashback_status === "credited"
-                ? `Cashback earned: FRW ${Number(o.cashback_awarded).toLocaleString()}`
-                : o.cashback_status === "reversed"
-                  ? "Cashback reversed"
-                  : "Cashback pending order completion"}
+              {cashbackStatusMessage(o)}
             </span>
           </div>
-
+          <DeliveryConfirmSection order={o} confirmingId={confirmingId} onConfirm={confirm} />
         </details>
       ))}
     </div>
   );
 }
 
-function statusBadge(s: string) {
-  switch (s) {
-    case "completed":
-    case "delivered":
-    case "approved":
-      return "border-success text-success";
-    case "shipped":
-      return "border-accent text-accent";
-    case "cancelled":
-      return "border-destructive text-destructive";
-    default:
-      return "border-border text-muted-foreground";
-  }
-}
 
 const TRACK_STEPS = [
   { key: "pending", label: "Order placed", hint: "We received your order" },
   { key: "payment_verified", label: "Payment approved", hint: "Admin verified your payment" },
   { key: "processing", label: "Processing", hint: "We're preparing your items" },
   { key: "shipped", label: "Out for delivery", hint: "On the way to you" },
-  { key: "delivered", label: "Delivered", hint: "Enjoy your purchase!" },
+  { key: "delivered", label: "Delivered", hint: "Confirm delivery to receive cashback" },
 ] as const;
 
-function stepIndexFor(status: string) {
-  if (status === "approved") return 1;
+function stepIndexFor(order: import("@/lib/loyalty").MyOrder) {
+  if (order.status === "cancelled") return -1;
+  if (orderIsFinalized(order)) return TRACK_STEPS.length - 1;
+  const status = order.delivery_status || order.status;
+  if (status === "paid") return 1;
+  if (status === "approved" || status === "confirmed") return 2;
   if (status === "completed") return TRACK_STEPS.length - 1;
   const i = TRACK_STEPS.findIndex((s) => s.key === status);
   return i === -1 ? 0 : i;
 }
 
 function OrderTracking() {
-  const { data: orders = [], isLoading } = useMyOrders();
+  const { data: orders = [], isLoading, isFetching } = useMyOrders();
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
+  const qc = useQueryClient();
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading…</div>;
+  const confirm = async (orderId: string) => {
+    setConfirmingId(orderId);
+    setDeliveryMessage(null);
+    try {
+      const result = await confirmOrderDelivery(orderId);
+      setDeliveryMessage(
+        result.cashback > 0
+          ? `Delivery confirmed. FRW ${Math.round(result.cashback).toLocaleString()} cashback was added to your wallet.`
+          : "Delivery confirmed. Thank you!",
+      );
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-wallet"] });
+      qc.invalidateQueries({ queryKey: ["my-wallet-tx"] });
+    } catch (error) {
+      setDeliveryMessage(error instanceof Error ? error.message : "Could not confirm delivery.");
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
+  if (isLoading && orders.length === 0) {
+    return <OrdersSkeleton label="Loading order tracking…" />;
+  }
   if (orders.length === 0)
     return (
       <div className="rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground">
@@ -310,9 +455,18 @@ function OrderTracking() {
 
   return (
     <div className="space-y-4">
+      {isFetching && orders.length > 0 && (
+        <p className="text-center text-xs text-muted-foreground">Refreshing tracking…</p>
+      )}
+      {deliveryMessage && (
+        <div className="rounded-xl border border-accent bg-accent/10 p-3 text-sm font-semibold">
+          {deliveryMessage}
+        </div>
+      )}
       {orders.map((o) => {
         const cancelled = o.status === "cancelled";
-        const current = stepIndexFor(o.status);
+        const current = stepIndexFor(o);
+        const finalized = orderIsFinalized(o);
         return (
           <div key={o.id} className="rounded-2xl border border-border bg-card p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -322,9 +476,14 @@ function OrderTracking() {
                   {new Date(o.created_at).toLocaleString()} · FRW {Number(o.total).toLocaleString()}
                 </div>
               </div>
-              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusBadge(o.status)}`}>
-                {o.status.replace(/_/g, " ")}
-              </span>
+              <OrderStatusBadges order={o} />
+            </div>
+
+            <div className="mt-4">
+              <OrderPaymentDetails order={o} compact />
+              {o.shipping_attachment_url && (
+                <ShippingAttachmentView url={o.shipping_attachment_url} forCustomer />
+              )}
             </div>
 
             {cancelled ? (
@@ -368,6 +527,19 @@ function OrderTracking() {
                 })}
               </ol>
             )}
+
+            {!cancelled && (
+              <div className="mt-4 border-t border-border pt-4">
+                <div className="mb-3 text-xs font-semibold uppercase text-muted-foreground">Cashback</div>
+                <p className="text-sm text-muted-foreground">{cashbackStatusMessage(o)}</p>
+                <DeliveryConfirmSection order={o} confirmingId={confirmingId} onConfirm={confirm} embedded />
+                {finalized && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    This order is closed — you cannot change or cancel it.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
@@ -404,7 +576,7 @@ function NotificationsTab() {
   const markAllRead = async () => {
     const ids = notifs.filter((n) => !n.read).map((n) => n.id);
     if (!ids.length) return;
-    await supabase.from("notifications").update({ read: true }).in("id", ids);
+    await markNotificationsRead(ids);
     qc.invalidateQueries({ queryKey: ["my-notifs"] });
   };
 

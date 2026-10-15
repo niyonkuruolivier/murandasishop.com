@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Bump CACHE_GEN when you need every visitor to purge old browser/PWA cache once. -->
+    <script>
+      (function () {
+        var VERSION_KEY = "murandasi_app_version";
+        var GEN_KEY = "murandasi_cache_gen";
+        var CACHE_GEN = "1";
+
+        function purgeAndReload() {
+          var tasks = [];
+          if ("serviceWorker" in navigator) {
+            tasks.push(
+              navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister(); }));
+              }),
+            );
+          }
+          if ("caches" in window) {
+            tasks.push(
+              caches.keys().then(function (keys) {
+                return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+              }),
+            );
+          }
+          Promise.all(tasks)
+            .catch(function () {})
+            .finally(function () {
+              window.location.reload();
+            });
+        }
+
+        function stripBustParam() {
+          try {
+            var url = new URL(window.location.href);
+            if (!url.searchParams.has("_")) return;
+            url.searchParams.delete("_");
+            window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+          } catch (e) {}
+        }
+
+        try {
+          stripBustParam();
+
+          if (localStorage.getItem(GEN_KEY) !== CACHE_GEN) {
+            localStorage.setItem(GEN_KEY, CACHE_GEN);
+            purgeAndReload();
+            return;
+          }
+
+          fetch("/version.json?t=" + Date.now(), { cache: "no-store" })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+              if (!data || !data.version) return;
+              var prev = localStorage.getItem(VERSION_KEY);
+              if (prev && prev !== data.version) {
+                localStorage.setItem(VERSION_KEY, data.version);
+                window.location.reload();
+              } else if (!prev) {
+                localStorage.setItem(VERSION_KEY, data.version);
+              }
+            })
+            .catch(function () {});
+        } catch (e) {}
+      })();
+    </script>
+    <title>Murandasi Shop — Electronics Made Simple</title>
+    <meta
+      name="description"
+      content="Browse phones, laptops, headphones, TVs and more. Simple prices, fast delivery."
+    />
+    <meta name="author" content="Murandasi Shop" />
+    <meta property="og:title" content="Murandasi Shop — Electronics Made Simple" />
+    <meta
+      property="og:description"
+      content="Browse phones, laptops, headphones, TVs and more. Simple prices, fast delivery."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Murandasi Shop" />
+    <meta property="og:url" content="https://murandasishop.com/" />
+    <meta property="og:image" content="https://murandasishop.com/pwa-512x512.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Murandasi Shop — Electronics Made Simple" />
+    <meta
+      name="twitter:description"
+      content="Browse phones, laptops, headphones, TVs and more. Simple prices, fast delivery."
+    />
+    <meta name="twitter:image" content="https://murandasishop.com/pwa-512x512.png" />
+    <link rel="canonical" href="https://murandasishop.com/" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0E0E6A" />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("murandasi_theme");
+          var dark =
+            saved === "dark" ||
+            (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) {
+            document.documentElement.classList.add("dark");
+            document.documentElement.style.colorScheme = "dark";
+            document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#0c0c24");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Murandasi" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TGZ2811QS4"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-TGZ2811QS4');
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <!-- <main>
+        <h1>Murandasi Shop — Electronics Made Simple</h1>
+        <p>
+          Murandasi Shop is an online store for phones, laptops, headphones,
+          televisions, and other electronics in Rwanda.
+        </p>
+        <p>
+          Browse products, view prices, place orders, and choose Mobile Money
+          delivery options. An account is only needed for account-specific
+          features such as order history and cashback.
+        </p>
+        <p><a href="/terms">Terms of Service</a></p>
+      </main> -->
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

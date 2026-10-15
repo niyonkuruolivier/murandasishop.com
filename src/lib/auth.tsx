@@ -1,35 +1,97 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet, apiPost, getStoredToken, setStoredToken } from "@/lib/api";
 import { captureReferralCodeFromUrl, claimPendingReferral } from "@/lib/referrals";
 
-type AuthContextValue = {
-  user: User | null;
-  loading: boolean;
+export type AuthUser = {
+  id: string;
+  email: string;
 };
 
-const AuthContext = createContext<AuthContextValue>({ user: null, loading: true });
+type AuthContextValue = {
+  user: AuthUser | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<void>;
+  signInWithGoogle: (credential: string) => Promise<void>;
+  signOut: () => void;
+};
+
+const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  loading: true,
+  signIn: async () => {},
+  signUp: async () => {},
+  signInWithGoogle: async () => {},
+  signOut: () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     captureReferralCodeFromUrl();
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) void claimPendingReferral();
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+    const token = getStoredToken();
+    if (!token) {
       setLoading(false);
-      if (data.session?.user) void claimPendingReferral();
-    });
-    return () => sub.subscription.unsubscribe();
+      return;
+    }
+    apiGet<AuthUser>("/auth/me")
+      .then((me) => {
+        setUser(me);
+        void claimPendingReferral();
+      })
+      .catch(() => {
+        setStoredToken(null);
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>;
+  const signIn = async (email: string, password: string) => {
+    const data = await apiPost<{ user: AuthUser; token: string }>(
+      "/auth/login",
+      { email, password },
+      false,
+    );
+    setStoredToken(data.token);
+    setUser(data.user);
+    void claimPendingReferral();
+  };
+
+  const signUp = async (email: string, password: string, fullName?: string) => {
+    const data = await apiPost<{ user: AuthUser; token: string }>(
+      "/auth/register",
+      { email, password, full_name: fullName },
+      false,
+    );
+    setStoredToken(data.token);
+    setUser(data.user);
+    void claimPendingReferral();
+  };
+
+  const signInWithGoogle = async (credential: string) => {
+    const data = await apiPost<{ user: AuthUser; token: string }>(
+      "/auth/google",
+      { credential },
+      false,
+    );
+    setStoredToken(data.token);
+    setUser(data.user);
+    void claimPendingReferral();
+  };
+
+  const signOut = () => {
+    setStoredToken(null);
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
@@ -43,12 +105,10 @@ export function useIsAdmin() {
     enabled: !!user,
     queryFn: async () => {
       if (!user) return false;
-      const { data, error } = await supabase.rpc("has_role", {
-        _user_id: user.id,
-        _role: "admin",
-      });
-      if (error) throw error;
-      return Boolean(data);
+      const data = await apiGet<{ isAdmin: boolean }>("/profile/is-admin");
+      return Boolean(data.isAdmin);
     },
   });
 }
+
+export { useAdminAccess, hasPermission, type AdminAccess, type PermissionKey } from "@/lib/admin-access";

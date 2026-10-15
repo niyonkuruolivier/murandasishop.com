@@ -1,15 +1,32 @@
 import { useState } from "react";
 import { Users, Copy, Check, Gift, Wallet, TrendingUp, Clock } from "lucide-react";
 import { useMyReferralStats, useMyReferrals, referralLink } from "@/lib/referrals";
+import { ApiError } from "@/lib/api";
 
 const frw = (n: number) => `FRW ${Math.round(Number(n) || 0).toLocaleString()}`;
 
+function errorMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    return `${error.message} (HTTP ${error.status})`;
+  }
+  if (error instanceof Error) return error.message;
+  return String(error ?? "Unknown error");
+}
+
 export function ReferralPanel() {
-  const { data: stats, isLoading } = useMyReferralStats();
-  const { data: rows = [] } = useMyReferrals();
+  const { data: stats, isLoading, isError, error, refetch, isFetching } = useMyReferralStats();
+  const { data: rows = [], isError: listError, error: listLoadError } = useMyReferrals();
   const [copied, setCopied] = useState(false);
 
   const link = stats?.code ? referralLink(stats.code) : "";
+  const loadingLink = !isError && (isLoading || isFetching) && !link;
+  const loadError = isError ? errorMessage(error) : listError ? errorMessage(listLoadError) : null;
+
+  const linkDisplay = loadingLink
+    ? "Loading…"
+    : loadError
+      ? loadError
+      : link || (stats ? "No referral code returned from server" : "Preparing your link…");
 
   const copy = async () => {
     if (!link) return;
@@ -47,9 +64,13 @@ export function ReferralPanel() {
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <input
             readOnly
-            value={isLoading ? "Loading…" : link}
+            value={linkDisplay}
             onFocus={(e) => e.currentTarget.select()}
-            className="h-12 flex-1 rounded-xl border border-border bg-background px-3 text-base outline-none"
+            className={`h-12 flex-1 rounded-xl border px-3 text-base outline-none ${
+              loadError
+                ? "border-destructive bg-destructive/5 text-destructive"
+                : "border-border bg-background"
+            }`}
           />
           <button
             onClick={copy}
@@ -59,7 +80,21 @@ export function ReferralPanel() {
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             {copied ? "Copied!" : "Copy Link"}
           </button>
+          {loadError && (
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="inline-flex h-12 items-center justify-center rounded-xl border border-border px-5 text-sm font-semibold hover:bg-secondary"
+            >
+              Retry
+            </button>
+          )}
         </div>
+        {loadError && (
+          <p className="mt-2 text-left text-xs text-destructive">
+            Referral error: {loadError}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

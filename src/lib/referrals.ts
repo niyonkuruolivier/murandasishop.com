@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet, apiPost } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { SITE_ORIGIN } from "@/lib/site";
 
 const REF_KEY = "murandasi_ref_code";
 
@@ -47,20 +48,22 @@ export async function claimPendingReferral() {
     return;
   }
   if (!code) return;
-  const { data, error } = await supabase.rpc("attach_referral", { _code: code });
-  if (error) return;
-  // Anything other than a transient auth failure is final — stop retrying.
-  if (data !== "unauthenticated") {
-    try {
-      localStorage.removeItem(REF_KEY);
-    } catch {
-      /* ignore */
+  try {
+    const data = await apiPost<{ result: string }>("/referrals/claim", { code });
+    if (data.result !== "unauthenticated") {
+      try {
+        localStorage.removeItem(REF_KEY);
+      } catch {
+        /* ignore */
+      }
     }
+  } catch {
+    /* retry later */
   }
 }
 
 export function referralLink(code: string) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://murandasishop.lovable.app";
+  const origin = typeof window !== "undefined" ? window.location.origin : SITE_ORIGIN;
   return `${origin}/?ref=${code}`;
 }
 
@@ -69,19 +72,8 @@ export function useMyReferralStats() {
   return useQuery({
     queryKey: ["my-referral-stats", user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("my_referral_stats");
-      if (error) throw error;
-      const r = (data ?? {}) as Record<string, unknown>;
-      return {
-        code: (r["code"] as string) ?? null,
-        total: Number(r["total"] ?? 0),
-        successful: Number(r["successful"] ?? 0),
-        earnings: Number(r["earnings"] ?? 0),
-        balance: Number(r["balance"] ?? 0),
-        reward_amount: Number(r["reward_amount"] ?? 1000),
-      } satisfies ReferralStats;
-    },
+    queryFn: () => apiGet<ReferralStats>("/referrals/stats"),
+    retry: 1,
   });
 }
 
@@ -90,10 +82,6 @@ export function useMyReferrals() {
   return useQuery({
     queryKey: ["my-referrals", user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("my_referral_list");
-      if (error) throw error;
-      return (data ?? []) as ReferralRow[];
-    },
+    queryFn: () => apiGet<ReferralRow[]>("/referrals"),
   });
 }
